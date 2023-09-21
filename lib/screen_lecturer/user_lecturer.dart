@@ -1,8 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-import '../gobal/drawerbar_lecturer.dart';
-import 'subject_detail_lecturer.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../gobal/drawerbar_lecturer.dart'; // Custom drawer imported
 
 class UserLecturer extends StatefulWidget {
   @override
@@ -10,224 +9,168 @@ class UserLecturer extends StatefulWidget {
 }
 
 class _UserLecturerState extends State<UserLecturer> {
-  List<Map<String, String>> subjects = [
-    {'code': '000011111', 'name': 'วิชาAAA', 'group': '2'},
-    {'code': '000011111', 'name': 'วิชาที่BBB', 'group': '1'},
-    {'code': '000011111', 'name': 'วิชาที่CCC', 'group': '3'},
-  ];
+  late final String userId; // Declare the userId variable
 
-  Future<bool?> _showDeleteConfirmationDialog(BuildContext context, int index) {
-    return showDialog<bool>(
+  @override
+  void initState() {
+    super.initState();
+    userId = FirebaseAuth.instance.currentUser!.uid; // Initialize userId
+  }
+
+  Future<bool?> _showDeleteConfirmationDialog(
+      BuildContext context, String docId) async {
+    // Show a dialog box to confirm deletion
+    bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("ยืนยันการลบ"),
-          content: const Text("คุณต้องการลบรายวิชานี้ใช่หรือไม่?"),
+          title: const Text('ยืนยันการลบ'),
+          content: const Text('คุณต้องการลบรายวิชานี้ใช่หรือไม่?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text("ยกเลิก"),
+              child: const Text('ยกเลิก'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text("ลบ"),
+              child: const Text('ลบ'),
             ),
           ],
         );
       },
     );
+
+    if (shouldDelete == true) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('subjects')
+          .doc(docId)
+          .delete(); // Delete only the selected subject
+    }
   }
 
-  void _addSubject() {
+  Future<void> _addSubject() async {
     TextEditingController codeController = TextEditingController();
     TextEditingController nameController = TextEditingController();
     TextEditingController groupController = TextEditingController();
 
-    showDialog(
+    await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("เพิ่มรายการวิชาใหม่"),
+          title: const Text('เพิ่มรายวิชาใหม่'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: codeController,
-                decoration: const InputDecoration(labelText: "รหัสวิชา"),
-                keyboardType: TextInputType.text,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[ก-๙a-zA-Z0-9]')),
-                ],
+                decoration: const InputDecoration(labelText: 'รหัสวิชา'),
               ),
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: "ชื่อรายวิชา"),
-                keyboardType: TextInputType.text,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[ก-๙a-zA-Z0-9]')),
-                ],
+                decoration: const InputDecoration(labelText: 'ชื่อรายวิชา'),
               ),
               TextField(
                 controller: groupController,
-                decoration: const InputDecoration(labelText: "หมู่เรียน"),
-                keyboardType: TextInputType.text,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[ก-๙a-zA-Z0-9]')),
-                ],
+                decoration: const InputDecoration(labelText: 'หมู่เรียน'),
               ),
             ],
           ),
           actions: [
             TextButton(
-              child: const Text("ยกเลิก"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('ยกเลิก'),
             ),
             TextButton(
-              child: const Text("เพิ่ม"),
-              onPressed: () {
-                String newCode = codeController.text.trim();
-                String newName = nameController.text.trim();
-                String newGroup = groupController.text.trim();
-
-                if (newCode.isNotEmpty &&
-                    newName.isNotEmpty &&
-                    newGroup.isNotEmpty &&
-                    !_subjectExists(newCode, newGroup)) {
-                  setState(() {
-                    subjects.add(
-                        {'code': newCode, 'name': newName, 'group': newGroup});
+              onPressed: () async {
+                if (codeController.text.isNotEmpty &&
+                    nameController.text.isNotEmpty &&
+                    groupController.text.isNotEmpty) {
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(userId)
+                      .collection('subjects')
+                      .add({
+                    'code': codeController.text.trim(),
+                    'name': nameController.text.trim(),
+                    'group': groupController.text.trim(),
                   });
                   Navigator.of(context).pop();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                        'กรุณากรอกรหัสวิชาและหมู่เรียนที่ไม่ซ้ำกันและไม่เป็นค่าว่าง'),
-                  ));
                 }
               },
+              child: const Text('เพิ่ม'),
             ),
           ],
         );
       },
     );
-  }
-
-  bool _subjectExists(String code, String group) {
-    return subjects
-        .any((subject) => subject['code'] == code && subject['group'] == group);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('User_lecturer'),
+        title: const Text('User Lecturer'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              _addSubject(); // สร้างฟังก์ชัน _addSubject() ที่จะถูกเรียกเมื่อกดปุ่ม
-            },
+            onPressed: _addSubject,
           ),
         ],
       ),
-      drawer: const DrawerbarLecturer(),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 80), // ระยะห่างระหว่างข้อความและรายวิชา
-          Expanded(
-            child: ListView.builder(
-              itemCount: subjects.length,
-              itemBuilder: (context, index) {
-                final subject = subjects[index];
-                return InkWell(
-                  onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (context) => SubjectDetail(subject: subject),
-                    //   ),
-                    // );
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20.0),
-                        margin: const EdgeInsets.only(
-                            top: 8.0, bottom: 8.0, left: 8.0, right: 8.0),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300], // สีเทาสำหรับกรอบรายวิชา
-                          borderRadius: BorderRadius.circular(30.0),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              ' ${index + 1}',
-                              style: const TextStyle(
-                                color:
-                                    Colors.green, // สีเขียวสำหรับเลขลำดับวิชา
-                                fontSize: 30.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 60.0),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'รหัสวิชา: ${subject['code']}',
-                                    style: const TextStyle(
-                                      fontSize: 18.0,
-                                    ),
-                                  ),
-                                  Text(
-                                    'ชื่อรายวิชา: ${subject['name']}',
-                                    style: const TextStyle(
-                                      fontSize: 20.0,
-                                    ),
-                                  ),
-                                  Text(
-                                    'หมู่เรียน: ${subject['group']}',
-                                    style: const TextStyle(
-                                      fontSize: 16.0,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete,
-                                color: Colors.red,
-                              ),
-                              onPressed: () async {
-                                bool? shouldDelete =
-                                    await _showDeleteConfirmationDialog(
-                                        context, index);
-                                if (shouldDelete == true) {
-                                  setState(() {
-                                    subjects.removeAt(index);
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(
-                          height: 20), // ระยะห่างระหว่างกรอบรายวิชาแต่ละรายการ
-                    ],
+      drawer: DrawerbarLecturer(),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('subjects')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const CircularProgressIndicator();
+          }
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              DocumentSnapshot doc = snapshot.data!.docs[index];
+              Map<String, dynamic> subject = doc.data() as Map<String, dynamic>;
+              return Card(
+                margin:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(15), // Less rounded corners
+                ),
+                child: ListTile(
+                  tileColor: Colors.white,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  title: Text(
+                    subject['name'] ?? '',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
+                  subtitle: Text(
+                    'Code: ${subject['code']}, Group: ${subject['group']}',
+                    style: TextStyle(
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete),
+                    color: Colors.red,
+                    onPressed: () =>
+                        _showDeleteConfirmationDialog(context, doc.id),
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
