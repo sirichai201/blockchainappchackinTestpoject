@@ -1,256 +1,210 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../gobal/drawerbar_nisit.dart';
 import 'subject_detail_nisit.dart';
 
 class UserNisit extends StatefulWidget {
-  const UserNisit({
-    super.key,
-  });
-
   @override
   _UserNisitState createState() => _UserNisitState();
 }
 
 class _UserNisitState extends State<UserNisit> {
-  List<Map<String, String>> subjects = [
-    {'code': '01111', 'name': 'วิชาAAA', 'group': '2'},
-    {'code': '222', 'name': 'วิชาที่BBB', 'group': '1'},
-    {'code': '03333', 'name': 'วิชาที่CCC', 'group': '3'},
-  ];
+  final List<String> subjects = [];
+  final TextEditingController _codeController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  late String currentUserUid;
 
-  String? joinedSubjectCode; // Variable to store the joined subject code
-
-  Future<bool?> _showDeleteConfirmationDialog(BuildContext context, int index) {
-    return showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("ยืนยันการลบ"),
-          content: const Text("คุณต้องการลบรายวิชานี้ใช่หรือไม่?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text("ยกเลิก"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text("ลบ"),
-            ),
-          ],
-        );
-      },
-    );
+  @override
+  void initState() {
+    super.initState();
+    currentUserUid = _auth.currentUser!.uid;
+    fetchSubjects();
   }
 
-  void _showJoinClassDialog() {
-    TextEditingController codeController = TextEditingController();
+  /// ฟังก์ชั่นสำหรับดึงวิชาที่นิสิตเข้าร่วม
+  Future<void> fetchSubjects() async {
+    var userSubjects = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserUid)
+        .collection('enrolledSubjects')
+        .get();
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Join a Class"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "You are currently signed in with email:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const Text(
-                "sirichai.c@ku.th", // Replace with the user's email
-                style: TextStyle(color: Colors.blue),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: codeController,
-                decoration:
-                    const InputDecoration(labelText: "Enter Class Code"),
-                keyboardType: TextInputType.text,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9]')),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: const Text("Cancel"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              child: const Text("Join Class"),
-              onPressed: () {
-                String classCode = codeController.text.trim();
-                // Check if class code is valid and join the class if needed
-                // Replace this with your logic to verify and join the class
-                if (isValidClassCode(classCode)) {
-                  setState(() {
-                    joinedSubjectCode = classCode;
-                  });
-                  Navigator.of(context).pop();
-                  _showJoinSuccessDialog(); // เรียกใช้ฟังก์ชันแสดงข้อความเมื่อสำเร็จ
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Invalid class code.'),
-                  ));
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+    List<String> fetchedSubjects = [];
+    for (var doc in userSubjects.docs) {
+      fetchedSubjects.add(doc.data()['name'] as String);
+    }
 
-  void _showJoinSuccessDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Join Class Successful"),
-          content: const Text("You have successfully joined the class!"),
-          actions: [
-            TextButton(
-              child: const Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  bool isValidClassCode(String classCode) {
-    // Replace with your logic to validate the class code
-    // Return true if it's a valid class code, otherwise, return false
-    return true;
+    setState(() {
+      subjects.addAll(fetchedSubjects);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("UserNisit"
-            //widget.nameFull ?? 'Name'
-            ),
+        title: const Text("UserNisit"),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              if (joinedSubjectCode == null) {
-                _showJoinClassDialog();
-              } else {
-                // Handle navigation or display message for already joined class
-                // For example, navigate to the subject detail screen for the joined subject
-                // Or show a message that the user is already in a class
-              }
-            },
+            onPressed: _addSubject,
           ),
         ],
       ),
-      drawer: DrawerBarNisit(),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 80),
-          Expanded(
-            child: ListView.builder(
-              itemCount: subjects.length,
-              itemBuilder: (context, index) {
-                final subject = subjects[index];
-                return InkWell(
-                  onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (context) => SubjectDetailNisit(
-                    //       subject: subject,
-                    //     ),
-                    //   ),
-                    // );
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20.0),
-                        margin: const EdgeInsets.only(
-                            top: 8.0, bottom: 8.0, left: 8.0, right: 8.0),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(60.0),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              ' ${index + 1}',
-                              style: const TextStyle(
-                                color: Colors.green,
-                                fontSize: 30.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 60.0),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'รหัสวิชา: ${subject['code']}',
-                                    style: const TextStyle(
-                                      fontSize: 18.0,
-                                    ),
-                                  ),
-                                  Text(
-                                    'ชื่อรายวิชา: ${subject['name']}',
-                                    style: const TextStyle(
-                                      fontSize: 20.0,
-                                    ),
-                                  ),
-                                  Text(
-                                    'หมู่เรียน: ${subject['group']}',
-                                    style: const TextStyle(
-                                      fontSize: 16.0,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete,
-                                color: Colors.red,
-                              ),
-                              onPressed: () async {
-                                bool? shouldDelete =
-                                    await _showDeleteConfirmationDialog(
-                                        context, index);
-                                if (shouldDelete == true) {
-                                  setState(() {
-                                    subjects.removeAt(index);
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                );
-              },
+      drawer: const DrawerBarNisit(),
+      body: _buildSubjectList(),
+    );
+  }
+
+  Widget _buildSubjectList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserUid)
+          .collection('enrolledSubjects')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const CircularProgressIndicator();
+
+        return ListView.builder(
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            DocumentSnapshot doc = snapshot.data!.docs[index];
+            Map<String, dynamic> subject = doc.data() as Map<String, dynamic>;
+            return _buildSubjectTile(subject, doc.id, context);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSubjectTile(
+      Map<String, dynamic> subject, String docId, BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: ListTile(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SubjectDetailNisit(
+                userId: currentUserUid,
+                docId: docId,
+              ),
             ),
-          ),
-        ],
+          );
+        },
+        title: Text(
+          subject['name'] ?? '',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        subtitle: Text(
+          'Code: ${subject['code']}, Group: ${subject['group']},',
+          style: TextStyle(color: Colors.grey[800]),
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete),
+          color: Colors.red,
+          onPressed: () =>
+              _showDeleteConfirmationDialog(context, docId, subject['name']),
+        ),
       ),
     );
+  }
+
+  Future<bool?> _showDeleteConfirmationDialog(
+      BuildContext context, String subjectId, String? subjectName) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('ยืนยัน'),
+          content: Text('คุณต้องการลบวิชา $subjectId, $subjectName หรือไม่?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('ไม่'),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: const Text('ใช่'),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addSubject() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('กรอกรหัสเพื่อเข้าร่วมวิชา'),
+          content: TextField(
+            controller: _codeController,
+            decoration: InputDecoration(hintText: "กรอกรหัส"),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('ยกเลิก'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: const Text('เข้าร่วม'),
+              onPressed: _processSubjectJoining,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _processSubjectJoining() async {
+    String code = _codeController.text;
+    var query = await FirebaseFirestore.instance
+        .collectionGroup('subjects')
+        .where('inviteCode', isEqualTo: code)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      var subjectData = query.docs.first.data();
+      String subjectName = subjectData['name'];
+      bool isApproved = subjectData['students'] != null &&
+          subjectData['students'].contains(currentUserUid);
+
+      if (isApproved) {
+        setState(() {
+          subjects.add(subjectName);
+        });
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserUid)
+            .collection('subjects')
+            .doc(subjectName)
+            .set(subjectData);
+      } else {
+        await FirebaseFirestore.instance
+            .doc(query.docs.first.reference.path)
+            .update({
+          'pendingStudents': FieldValue.arrayUnion([currentUserUid])
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("รอคำอนุมัติ"),
+        ));
+        Navigator.of(context).pop();
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("รหัสไม่ถูกต้อง!"),
+      ));
+      Navigator.of(context).pop();
+    }
   }
 }

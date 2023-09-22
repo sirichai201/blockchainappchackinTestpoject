@@ -60,7 +60,7 @@ class DrawerBarNisit extends StatelessWidget {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const UserNisit(),
+                  builder: (context) => UserNisit(),
                 ),
               ); // Add your code here when clicking on 'วิชาเรียน'
             },

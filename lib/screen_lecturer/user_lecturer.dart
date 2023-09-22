@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../gobal/drawerbar_lecturer.dart'; // Custom drawer imported
+import '../gobal/drawerbar_lecturer.dart';
+import 'subject_detail_lecturer.dart'; // Custom drawer imported
+import 'package:uuid/uuid.dart';
 
 class UserLecturer extends StatefulWidget {
   @override
@@ -10,6 +12,11 @@ class UserLecturer extends StatefulWidget {
 
 class _UserLecturerState extends State<UserLecturer> {
   late final String userId; // Declare the userId variable
+
+  String generateInviteCode() {
+    var uuid = Uuid();
+    return uuid.v4().substring(0, 6); // สร้างรหัสเชิญ 6 ตัวอักษร
+  }
 
   @override
   void initState() {
@@ -84,6 +91,7 @@ class _UserLecturerState extends State<UserLecturer> {
             ),
             TextButton(
               onPressed: () async {
+                String inviteCode = generateInviteCode();
                 if (codeController.text.isNotEmpty &&
                     nameController.text.isNotEmpty &&
                     groupController.text.isNotEmpty) {
@@ -95,6 +103,9 @@ class _UserLecturerState extends State<UserLecturer> {
                     'code': codeController.text.trim(),
                     'name': nameController.text.trim(),
                     'group': groupController.text.trim(),
+                    'inviteCode': inviteCode, // เพิ่ม field สำหรับเก็บรหัสเชิญ
+                    'students': [],
+                    'pendingStudents': []
                   });
                   Navigator.of(context).pop();
                 }
@@ -144,6 +155,17 @@ class _UserLecturerState extends State<UserLecturer> {
                       BorderRadius.circular(15), // Less rounded corners
                 ),
                 child: ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SubjectDetail(
+                          userId: userId,
+                          docId: doc.id,
+                        ),
+                      ),
+                    );
+                  },
                   tileColor: Colors.white,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -155,7 +177,7 @@ class _UserLecturerState extends State<UserLecturer> {
                     ),
                   ),
                   subtitle: Text(
-                    'Code: ${subject['code']}, Group: ${subject['group']}',
+                    'Code: ${subject['code']}, Group: ${subject['group']}, Invite Code: ${subject['inviteCode']}',
                     style: TextStyle(
                       color: Colors.grey[800],
                     ),
