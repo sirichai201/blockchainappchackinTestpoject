@@ -22,6 +22,21 @@ class _UserNisitState extends State<UserNisit> {
     fetchSubjects();
   }
 
+//สร้างฟังก์ชันในการลบวิชา:
+  Future<void> _deleteSubject(String docId) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserUid)
+        .collection('enrolledSubjects')
+        .doc(docId)
+        .delete();
+
+    // อัพเดท UI
+    setState(() {
+      subjects.removeWhere((subject) => subject == docId);
+    });
+  }
+
   /// ฟังก์ชั่นสำหรับดึงวิชาที่นิสิตเข้าร่วม
   Future<void> fetchSubjects() async {
     var userSubjects = await FirebaseFirestore.instance
@@ -132,7 +147,10 @@ class _UserNisitState extends State<UserNisit> {
             ),
             TextButton(
               child: const Text('ใช่'),
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () {
+                _deleteSubject(subjectId);
+                Navigator.of(context).pop(true);
+              },
             ),
           ],
         );
@@ -172,6 +190,14 @@ class _UserNisitState extends State<UserNisit> {
         .where('inviteCode', isEqualTo: code)
         .get();
 
+    var userData = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserUid)
+        .get();
+
+    String currentUserName = userData.data()?['Username'];
+    String currentUserEmail = userData.data()?['email'];
+
     if (query.docs.isNotEmpty) {
       var subjectData = query.docs.first.data();
       String subjectName = subjectData['name'];
@@ -192,9 +218,16 @@ class _UserNisitState extends State<UserNisit> {
         await FirebaseFirestore.instance
             .doc(query.docs.first.reference.path)
             .update({
-          'pendingStudents': FieldValue.arrayUnion([currentUserUid])
+          'pendingStudents': FieldValue.arrayUnion([
+            {
+              'uid': currentUserUid,
+              'name':
+                  currentUserName, // ค่านี้ควรมาจากตัวแปรที่เก็บชื่อของนิสิต
+              'email':
+                  currentUserEmail, // ค่านี้ควรมาจากตัวแปรที่เก็บอีเมลของนิสิต
+            }
+          ])
         });
-
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("รอคำอนุมัติ"),
         ));

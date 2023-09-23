@@ -107,6 +107,7 @@ class _SubjectDetailState extends State<SubjectDetail> {
     );
   }
 
+  // สำหรับ _pendingStudentsDropdown
   Container _pendingStudentsDropdown(List<dynamic> pendingStudents) {
     return Container(
       padding: EdgeInsets.all(8.0),
@@ -114,22 +115,26 @@ class _SubjectDetailState extends State<SubjectDetail> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.orangeAccent),
       ),
-      child: DropdownButton<String>(
+      child: DropdownButton<dynamic>(
+        // <-- ที่นี่เปลี่ยนเป็น dynamic
         hint: Text('Pending Students:'),
         onChanged: (value) {},
-        items: pendingStudents.map((studentUid) {
-          return DropdownMenuItem<String>(
-            value: studentUid,
+        items: pendingStudents.map((student) {
+          // <-- ใช้ชื่อว่า student แทน studentUid
+          return DropdownMenuItem<dynamic>(
+            value: student, // ให้ value เป็น map แทนที่จะเป็น string
             child: Row(
               children: [
-                Text(studentUid),
+                Text('${student['name']} (${student['email']})'),
                 IconButton(
                   icon: Icon(Icons.check, color: Colors.green),
-                  onPressed: () => approveStudent(studentUid),
+                  onPressed: () => approveStudent(
+                      student['uid'], student['name'], student['email']),
                 ),
                 IconButton(
                   icon: Icon(Icons.close, color: Colors.red),
-                  onPressed: () => rejectStudent(studentUid),
+                  onPressed: () => rejectStudent(student[
+                      'uid']), // <-- ใช้ student['uid'] แทนที่จะเป็น student
                 ),
               ],
             ),
@@ -146,20 +151,22 @@ class _SubjectDetailState extends State<SubjectDetail> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.greenAccent),
       ),
-      child: DropdownButton<String>(
+      child: DropdownButton<dynamic>(
         hint: Text('Approved Students:'),
         onChanged: (value) {},
-        items: approvedStudents.map((studentUid) {
-          return DropdownMenuItem<String>(
-            value: studentUid,
-            child: Text(studentUid),
+        items: approvedStudents.map((student) {
+          return DropdownMenuItem<dynamic>(
+            value: student,
+            child: Text(
+                '${student['name']} (${student['email']})'), // แสดงชื่อและ email
           );
         }).toList(),
       ),
     );
   }
 
-  Future<void> approveStudent(String studentUid) async {
+  Future<void> approveStudent(
+      String studentUid, String studentName, String studentEmail) async {
     DocumentSnapshot subjectDoc = await subjects
         .doc(widget.userId)
         .collection('subjects')
@@ -172,8 +179,12 @@ class _SubjectDetailState extends State<SubjectDetail> {
         .collection('subjects')
         .doc(widget.docId)
         .update({
-      'students': FieldValue.arrayUnion([studentUid]),
-      'pendingStudents': FieldValue.arrayRemove([studentUid]),
+      'students': FieldValue.arrayUnion([
+        {'uid': studentUid, 'name': studentName, 'email': studentEmail}
+      ]),
+      'pendingStudents': FieldValue.arrayRemove([
+        {'uid': studentUid, 'name': studentName, 'email': studentEmail}
+      ])
     });
 
     await subjects
