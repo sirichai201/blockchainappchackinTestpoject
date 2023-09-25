@@ -111,9 +111,10 @@ class _CheckInPageState extends State<CheckInPage> {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
     );
+
     if (pickedDate != null && pickedDate != _selectedDate)
       setState(() {
         _selectedDate = pickedDate;
@@ -128,11 +129,24 @@ class _CheckInPageState extends State<CheckInPage> {
       context: context,
       initialTime: _startTime,
     );
-    if (pickedTime != null && pickedTime != _startTime)
+
+    if (pickedTime != null) {
+      final now = DateTime.now();
+      final selectedTime = DateTime(
+          now.year, now.month, now.day, pickedTime.hour, pickedTime.minute);
+
+      if (selectedTime.isBefore(now)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('กรุณาเลือกเวลาที่ยังไม่ผ่านไป')),
+        );
+        return;
+      }
+
       setState(() {
         _startTime = pickedTime;
         _startTimeController.text = pickedTime.format(context);
       });
+    }
   }
 
   Future<void> _selectEndTime() async {
@@ -140,11 +154,24 @@ class _CheckInPageState extends State<CheckInPage> {
       context: context,
       initialTime: _endTime,
     );
-    if (pickedTime != null && pickedTime != _endTime)
+
+    if (pickedTime != null) {
+      final now = DateTime.now();
+      final selectedTime = DateTime(
+          now.year, now.month, now.day, pickedTime.hour, pickedTime.minute);
+
+      if (selectedTime.isBefore(now)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('กรุณาเลือกเวลาที่ยังไม่ผ่านไป')),
+        );
+        return;
+      }
+
       setState(() {
         _endTime = pickedTime;
         _endTimeController.text = pickedTime.format(context);
       });
+    }
   }
 
   Future<void> _getLocation() async {

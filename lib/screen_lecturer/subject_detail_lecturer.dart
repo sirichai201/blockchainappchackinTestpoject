@@ -202,6 +202,7 @@ class _SubjectDetailState extends State<SubjectDetail> {
       'name': subject['name'],
       'code': subject['code'],
       'group': subject['group'],
+      'uidTeacher': widget.userId
     });
 
     ScaffoldMessenger.of(context)

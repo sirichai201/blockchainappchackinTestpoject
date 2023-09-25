@@ -108,12 +108,12 @@ class _UserNisitState extends State<UserNisit> {
             context,
             MaterialPageRoute(
               builder: (context) => SubjectDetailNisit(
-                userId: currentUserUid,
-                docId: docId,
-                subjectName: subject['name'], // ส่งชื่อวิชา
-                subjectCode: subject['code'], // ส่งรหัสวิชา
-                subjectGroup: subject['group'], // ส่งหมู่เรียน
-              ),
+                  userId: currentUserUid,
+                  docId: docId,
+                  subjectName: subject['name'], // ส่งชื่อวิชา
+                  subjectCode: subject['code'], // ส่งรหัสวิชา
+                  subjectGroup: subject['group'], // ส่งหมู่เรียน
+                  uidTeacher: subject['uidTeacher']),
             ),
           );
         },

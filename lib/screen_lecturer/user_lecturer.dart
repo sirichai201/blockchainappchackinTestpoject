@@ -105,7 +105,8 @@ class _UserLecturerState extends State<UserLecturer> {
                     'group': groupController.text.trim(),
                     'inviteCode': inviteCode, // เพิ่ม field สำหรับเก็บรหัสเชิญ
                     'students': [],
-                    'pendingStudents': []
+                    'pendingStudents': [],
+                    'uidTeacher': userId
                   });
                   Navigator.of(context).pop();
                 }

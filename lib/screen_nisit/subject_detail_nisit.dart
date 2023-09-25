@@ -10,6 +10,7 @@ class SubjectDetailNisit extends StatefulWidget {
   final String subjectName;
   final String subjectCode;
   final String subjectGroup;
+  final String uidTeacher;
 
   const SubjectDetailNisit({
     required this.userId,
@@ -17,6 +18,7 @@ class SubjectDetailNisit extends StatefulWidget {
     required this.subjectName,
     required this.subjectCode,
     required this.subjectGroup,
+    required this.uidTeacher,
     Key? key,
   }) : super(key: key);
 
@@ -25,7 +27,6 @@ class SubjectDetailNisit extends StatefulWidget {
 }
 
 class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
-  String scheduleId = ''; // ประกาศตัวแปรที่นี่
   late final String currentUserUid;
   late final String subjectDocId;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -82,49 +83,51 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
   }
 
   Future<void> checkIn(String status) async {
-    if (!isWithinUniversity(_locationData)) {
-      print('User is not within the allowed check-in area.');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('You are not within the allowed check-in area.'),
-      ));
-      return;
-    }
-    final subjectsRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.userId)
-        .collection('subjects');
-    final subjectRef = subjectsRef.doc(widget.docId);
-    final attendanceSchedulesRef = subjectRef.collection('attendanceSchedules');
-    final String scheduleId = DateTime.now().toIso8601String().split('T')[0];
-    this.scheduleId = scheduleId; // กำหนดค่าที่นี่
-    final attendanceScheduleRef = attendanceSchedulesRef.doc(scheduleId);
-
     try {
-      print('Check-in Successful for $currentUserUid at $scheduleId');
-      final DocumentSnapshot scheduleDoc = await attendanceScheduleRef.get();
-      if (!scheduleDoc.exists) {
+      if (!isWithinUniversity(_locationData)) {
+        print('User is not within the allowed check-in area.');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('No schedule available for today.'),
+          content: Text('You are not within the allowed check-in area.'),
         ));
         return;
+      }
+      final subjectsRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.uidTeacher)
+          .collection('subjects');
+      final subjectRef = subjectsRef.doc(widget.docId);
+      final attendanceSchedulesRef =
+          subjectRef.collection('attendanceSchedules');
+      // สร้าง scheduleId ใหม่จากวันที่ปัจจุบันใน local timezone
+      final now = DateTime.now().toLocal();
+      final scheduleId =
+          now.toString().split(' ')[0]; // ตรงกับ format ที่คุณมีใน Firestore
+
+      print('Current scheduleId: $scheduleId');
+
+      final attendanceScheduleRef = attendanceSchedulesRef.doc(scheduleId);
+      final DocumentSnapshot scheduleDoc = await attendanceScheduleRef.get();
+      print('Trying to access document at: ${attendanceScheduleRef.path}');
+      if (!scheduleDoc.exists) {
+        throw Exception('Document does not exist at the expected path.');
       }
 
       final Map<String, dynamic> scheduleData =
           scheduleDoc.data() as Map<String, dynamic>;
       final DateTime startDate = scheduleData['startDate'].toDate();
       final DateTime endDate = scheduleData['endDate'].toDate();
-      final DateTime now = DateTime.now();
 
       if (now.isBefore(startDate) || now.isAfter(endDate)) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Not within check-in time range.'),
         ));
+
         return;
       }
 
       final userDoc =
           await _firestore.collection('users').doc(currentUserUid).get();
-      final username = userDoc.get('username') ?? "";
+      final username = userDoc.get('Username') ?? "";
       final email = userDoc.get('email') ?? "";
       final studentId = userDoc.get('studentId') ?? "";
 
@@ -145,8 +148,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         content: Text('Check-in Successful!'),
       ));
     } catch (e) {
-      print('Check-in Failed: $e');
-      print(e);
+      print('Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Check-in Failed!'),
       ));
@@ -226,7 +228,6 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                 }
 
                 if (!snapshot.hasData || !snapshot.data!.exists) {
-                  print('No data available for $scheduleId.');
                   return Text('No data available.');
                 }
 
@@ -234,11 +235,9 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                 final List<dynamic>? studentsChecked = data['studentsChecked'];
 
                 if (studentsChecked == null || studentsChecked.isEmpty) {
-                  print('No check-ins yet for $scheduleId.');
                   return Text('No check-ins yet.');
                 }
-                print(
-                    'Rendering ${studentsChecked.length} check-ins for $scheduleId.');
+
                 return ListView.builder(
                   shrinkWrap: true,
                   itemCount: studentsChecked.length,
