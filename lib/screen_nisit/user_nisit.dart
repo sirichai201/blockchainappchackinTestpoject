@@ -110,6 +110,9 @@ class _UserNisitState extends State<UserNisit> {
               builder: (context) => SubjectDetailNisit(
                 userId: currentUserUid,
                 docId: docId,
+                subjectName: subject['name'], // ส่งชื่อวิชา
+                subjectCode: subject['code'], // ส่งรหัสวิชา
+                subjectGroup: subject['group'], // ส่งหมู่เรียน
               ),
             ),
           );

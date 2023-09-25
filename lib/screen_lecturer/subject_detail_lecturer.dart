@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'chackin.dart';
+
 class SubjectDetail extends StatefulWidget {
   final String userId;
   final String docId;
@@ -21,6 +23,11 @@ class _SubjectDetailState extends State<SubjectDetail> {
     return Scaffold(
       appBar: _buildAppBar(),
       body: _buildBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToCheckInPage,
+        child: Icon(Icons.check),
+        backgroundColor: Colors.green,
+      ),
     );
   }
 
@@ -213,5 +220,13 @@ class _SubjectDetailState extends State<SubjectDetail> {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('ลบเรียบร้อยแล้ว')));
     setState(() {});
+  }
+
+  void _navigateToCheckInPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+          builder: (context) =>
+              CheckInPage(docId: widget.docId, userId: widget.userId)),
+    );
   }
 }
