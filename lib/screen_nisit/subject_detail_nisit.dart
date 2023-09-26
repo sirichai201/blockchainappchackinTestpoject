@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
+import 'package:intl/intl.dart'; // สำหรับใช้งาน DateFormat
 
 class SubjectDetailNisit extends StatefulWidget {
   final String userId;
@@ -91,29 +92,39 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         ));
         return;
       }
-      final subjectsRef = FirebaseFirestore.instance
+      // ที่อยู่ของ Document ใน Firestore
+      final attendanceScheduleRef = _firestore
           .collection('users')
           .doc(widget.uidTeacher)
-          .collection('subjects');
-      final subjectRef = subjectsRef.doc(widget.docId);
-      final attendanceSchedulesRef =
-          subjectRef.collection('attendanceSchedules');
-      // สร้าง scheduleId ใหม่จากวันที่ปัจจุบันใน local timezone
-      final now = DateTime.now().toLocal();
-      final scheduleId =
-          now.toString().split(' ')[0]; // ตรงกับ format ที่คุณมีใน Firestore
+          .collection('subjects')
+          .doc(subjectDocId)
+          .collection('attendanceSchedules')
+          .doc(DateTime.now().toLocal().toString().split(' ')[0]);
 
-      print('Current scheduleId: $scheduleId');
-
-      final attendanceScheduleRef = attendanceSchedulesRef.doc(scheduleId);
       final DocumentSnapshot scheduleDoc = await attendanceScheduleRef.get();
-      print('Trying to access document at: ${attendanceScheduleRef.path}');
+
       if (!scheduleDoc.exists) {
         throw Exception('Document does not exist at the expected path.');
       }
 
       final Map<String, dynamic> scheduleData =
           scheduleDoc.data() as Map<String, dynamic>;
+
+      // ตรวจสอบว่าผู้ใช้ได้เช็คอินแล้วหรือยัง
+      final List<dynamic>? studentsChecked = scheduleData['studentsChecked'];
+      if (studentsChecked != null) {
+        for (var student in studentsChecked) {
+          if (student['uid'] == currentUserUid) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('คุณได้เช็คอินแล้ว!'),
+            ));
+            return;
+          }
+        }
+      }
+
+      // หากยังไม่ได้เช็คอิน ให้ทำการเช็คอิน
+      final DateTime now = DateTime.now().toLocal();
       final DateTime startDate = scheduleData['startDate'].toDate();
       final DateTime endDate = scheduleData['endDate'].toDate();
 
@@ -121,7 +132,6 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Not within check-in time range.'),
         ));
-
         return;
       }
 
@@ -181,41 +191,81 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: () => checkIn('attended'),
-                child: Text('มาเรียน'),
-              ),
+            SizedBox(
+              height: 30,
             ),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: () => checkIn('leave'),
-                child: Text('ลา'),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Align(
-                alignment: Alignment.center,
-                child: ElevatedButton(
-                  onPressed: _getLocation,
-                  child: Text('Get Location'),
-                ),
+              child: Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceEvenly, // จัดวาง button ให้อยู่กลาง
+                children: [
+                  ElevatedButton(
+                    onPressed: () => checkIn('attended'),
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(Colors.green),
+                      shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      )),
+                      padding: MaterialStateProperty.all(
+                        EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                      ),
+                    ),
+                    child: Text('มาเรียน',
+                        style: TextStyle(color: Colors.white, fontSize: 18)),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => checkIn('leave'),
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(
+                          Color.fromARGB(255, 40, 29, 139)),
+                      shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      )),
+                      padding: MaterialStateProperty.all(
+                        EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                      ),
+                    ),
+                    child: Text('ลา',
+                        style: TextStyle(color: Colors.white, fontSize: 18)),
+                  ),
+                ],
               ),
             ),
             if (_locationData != null)
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Latitude: ${_locationData!.latitude}, Longitude: ${_locationData!.longitude}',
+                child: Card(
+                  elevation: 4.0, // ยกกรอบขึ้นมาเล็กน้อย
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0), // มุมโค้งของกรอบ
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white, // สีพื้นหลังของ Text
+                      borderRadius:
+                          BorderRadius.circular(10.0), // มุมโค้งของพื้นหลัง
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.5), // สีเงา
+                          spreadRadius: 1,
+                          blurRadius: 5,
+                          offset: Offset(0, 2), // ตำแหน่งของเงา
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'Latitude: ${_locationData!.latitude}, Longitude: ${_locationData!.longitude}',
+                      style: TextStyle(fontSize: 16.0),
+                    ),
+                  ),
                 ),
               ),
             StreamBuilder<DocumentSnapshot>(
               stream: _firestore
                   .collection('users')
-                  .doc(currentUserUid)
+                  .doc(widget.uidTeacher)
                   .collection('subjects')
                   .doc(subjectDocId)
                   .collection('attendanceSchedules')
@@ -240,14 +290,49 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
                 return ListView.builder(
                   shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
                   itemCount: studentsChecked.length,
                   itemBuilder: (context, index) {
                     final checkIn =
                         studentsChecked[index] as Map<String, dynamic>;
                     final DateTime time = checkIn['time'].toDate();
-                    return ListTile(
-                      title: Text(
-                          '${checkIn['name']} - ${time.toString()} - ${checkIn['status']}'),
+                    return Card(
+                      margin: const EdgeInsets.all(8.0),
+                      elevation: 4.0,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ชื่อ ${checkIn['name']}',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'ชื่อวิชา ${widget.subjectName} รหัสวิชา ${widget.subjectCode} หมู่เรียน ${widget.subjectGroup}',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                            SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'สภานะ ${checkIn['status'] == 'attended' ? 'Success' : 'Leave'}',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: checkIn['status'] == 'attended'
+                                          ? Colors.green
+                                          : Color.fromARGB(255, 65, 59, 153)),
+                                ),
+                                Text(
+                                    'เวลา ${DateFormat('HH:mm').format(time)}'),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 );
