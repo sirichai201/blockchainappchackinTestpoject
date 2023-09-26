@@ -217,7 +217,8 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                   ElevatedButton(
                     onPressed: () => checkIn('leave'),
                     style: ButtonStyle(
-                      backgroundColor: MaterialStateProperty.all(Colors.red),
+                      backgroundColor: MaterialStateProperty.all(
+                          Color.fromARGB(255, 40, 29, 139)),
                       shape: MaterialStateProperty.all(RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
                       )),
@@ -323,7 +324,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                                       fontSize: 14,
                                       color: checkIn['status'] == 'attended'
                                           ? Colors.green
-                                          : Colors.red),
+                                          : Color.fromARGB(255, 65, 59, 153)),
                                 ),
                                 Text(
                                     'เวลา ${DateFormat('HH:mm').format(time)}'),
