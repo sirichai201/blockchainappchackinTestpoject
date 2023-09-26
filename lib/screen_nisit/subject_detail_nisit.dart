@@ -155,6 +155,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
     }
   }
 
+  ///กฟกฟฟกฟกฟก
   AppBar _buildAppBar() {
     return AppBar(
       title: Column(
