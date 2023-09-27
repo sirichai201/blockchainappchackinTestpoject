@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_type_check
+
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -97,6 +99,11 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('You are not within the allowed check-in area.'),
         ));
+        print(
+            'LocationData: ${_locationData?.latitude}, ${_locationData?.longitude}');
+        print('User is not within the allowed check-in area.');
+        print('User has already checked in.');
+
         return;
       }
       // ที่อยู่ของ Document ใน Firestore
@@ -148,9 +155,53 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       final email = userDoc.get('email') ?? "";
       final studentId = userDoc.get('studentId') ?? "";
 
-      final client = web3.Web3Client('http://10.0.2.2:7545', Client());
+      final client = web3.Web3Client('http://10.0.2.2:8545', Client());
 
       final contractAbiList = [
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "student",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "date",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "rewardAmount",
+              "type": "uint256"
+            }
+          ],
+          "name": "CheckedIn",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "student",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "SpentCoin",
+          "type": "event"
+        },
         {
           "inputs": [
             {"internalType": "address", "name": "", "type": "address"},
@@ -208,23 +259,33 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
           ],
           "stateMutability": "view",
           "type": "function"
+        },
+        {
+          "inputs": [
+            {"internalType": "uint256", "name": "amount", "type": "uint256"}
+          ],
+          "name": "spendCoin",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
         }
       ];
       final contractAddress = web3.EthereumAddress.fromHex(
-          '0x34db88B3E5aA4DA5878720a116989B0fFE89Cb22');
+          '0x2eFD35Fc72B4d90E135e6b3E0428f911e73C12E1');
 
       final credentials = await client.credentialsFromPrivateKey(
-          'fd5bcfb24142af3a56e0a3be965f40448a9f3fd1f1517f8872b0a456446587c5');
+          '7868d1e4d98b02b48d352e615b8c4abcb49d8cacc37c1f57ed263e69825a671f');
       final contractAbi = web3.ContractAbi.fromJson(
           jsonEncode(contractAbiList), 'AttendanceContract');
       final contract = web3.DeployedContract(contractAbi, contractAddress);
 
       final dateBigInt = BigInt.from(DateTime.now().millisecondsSinceEpoch);
 
-      final rewardAmount = 0.2; // จำนวนเหรียญที่คุณต้องการให้นักเรียนได้รับ
+      final rewardAmount = 0.02; // จำนวนเหรียญที่คุณต้องการให้นักเรียนได้รับ
       final checkRewardFunction = contract.function('checkAttendanceAndReward');
+      print(checkRewardFunction);
       final getBalanceFunction = contract.function('getBalance');
-
+      print(getBalanceFunction);
       // ignore: unused_local_variable
       final response = await client.sendTransaction(
         credentials,
@@ -238,19 +299,29 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
           ],
         ),
       );
+      final parameters = [
+        dateBigInt,
+        BigInt.from((rewardAmount * 1e18)
+            .toInt()) // ใช้ BigInt ที่แปลงจาก 0.2 Ether ไปเป็น Wei แล้ว
+      ];
+      print(parameters);
 
-      final balance = await client.call(
-        contract: contract,
-        function: getBalanceFunction,
-        params: [],
-      );
-
+      print(contract);
+      print(dateBigInt); // แสดงค่าของ dateBigInt
+      print(rewardAmount * 1e18); // แสดงค่าของ rewardAmount ที่ถูกแปลงเป็น Wei
+      print(response);
+      print(status);
+      print(credentials);
+      print(client);
+      print(contractAbi);
+      print(contractAddress);
+      print(credentials);
+      final balance = await client
+          .call(contract: contract, function: getBalanceFunction, params: []);
       if (balance is List && balance.isNotEmpty && balance[0] is BigInt) {
         final balanceInt = balance[0] as BigInt;
-        // Now, proceed with the `balanceInt`
         print('Balance: $balanceInt');
       } else {
-        // Handle the error appropriately, may log it or show to the user.
         print(
             'Error: Unable to fetch balance or balance is not of type BigInt');
       }
@@ -269,14 +340,13 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       await attendanceScheduleRef.update({
         'studentsChecked': FieldValue.arrayUnion([newCheckIn])
       });
+      print('Updated Firestore with new check-in data.');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            balanceInt != null
-                ? 'Check-in Successful! You received $rewardAmount tokens. Your new balance is ${balanceInt! / BigInt.from(1e18)} tokens.'
-                : 'Check-in Successful! You received $rewardAmount tokens. However, we could not retrieve your new balance.',
-          ),
+          content: Text(balanceInt != null
+              ? 'Your new balance is ${balanceInt! / BigInt.from(1e18)} tokens.'
+              : 'However, we could not retrieve your new balance.'),
         ),
       );
     } catch (e) {
@@ -409,6 +479,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                 if (studentsChecked == null || studentsChecked.isEmpty) {
                   return Text('No check-ins yet.');
                 }
+                print('UI Updated.');
 
                 return ListView.builder(
                   shrinkWrap: true,
