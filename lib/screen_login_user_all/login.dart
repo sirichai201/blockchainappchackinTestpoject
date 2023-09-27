@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
 
 import '../screen_addmin/user_admin.dart';
 import '../screen_lecturer/User_lecturer.dart';
@@ -34,14 +33,17 @@ class _LoginState extends State<Login> {
 
         switch (userRole) {
           case 'นิสิต':
+            // ignore: use_build_context_synchronously
             Navigator.pushReplacement(
                 context, MaterialPageRoute(builder: (context) => UserNisit()));
             break;
           case 'อาจารย์':
+            // ignore: use_build_context_synchronously
             Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (context) => UserLecturer()));
             break;
           case 'admin':
+            // ignore: use_build_context_synchronously
             Navigator.pushReplacement(
                 context, MaterialPageRoute(builder: (context) => UserAdmin()));
             break;
@@ -50,25 +52,10 @@ class _LoginState extends State<Login> {
             break;
         }
       }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      if (e.code == 'user-not-found') {
-        errorMessage = 'ไม่มีผู้ใช้ที่มีอีเมลนี้.';
-      } else if (e.code == 'wrong-password') {
-        errorMessage = 'รหัสผ่านไม่ถูกต้องสำหรับอีเมลนี้.';
-      } else {
-        errorMessage = 'เกิดข้อผิดพลาด: $e';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
     } catch (e) {
-      String errorMessage = 'มีข้อผิดพลาด: $e';
-      if (e is PlatformException && e.code == 'UNKNOWN') {
-        errorMessage = 'เกิดข้อผิดพลาด: รหัสผ่านหรืออีเมลไม่ถูกต้อง';
-      }
+      print(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
+        SnackBar(content: Text('มีข้อผิดพลาด: $e')),
       );
     }
   }
