@@ -10,6 +10,7 @@ contract AttendanceContract {
         
         attendanceRecords[msg.sender][date] = true;
         balances[msg.sender] += rewardAmount;
+         emit CheckedIn(msg.sender, date, rewardAmount);
     }
 
     function isAttended(address student, uint256 date) public view returns (bool) {
@@ -19,4 +20,15 @@ contract AttendanceContract {
     function getBalance() public view returns (uint256) {
         return balances[msg.sender];
     }
+
+    function spendCoin(uint256 amount) public {
+    require(balances[msg.sender] >= amount, "Insufficient balance");
+    balances[msg.sender] -= amount;
+    emit SpentCoin(msg.sender, amount);
+}
+
+event CheckedIn(address indexed student, uint256 date, uint256 rewardAmount);
+event SpentCoin(address indexed student, uint256 amount);
+
+
 }

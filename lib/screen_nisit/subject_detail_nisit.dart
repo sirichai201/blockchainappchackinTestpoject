@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
 import 'package:intl/intl.dart'; // สำหรับใช้งาน DateFormat
-
+import 'dart:convert'; // ให้เพิ่ม import นี้ที่ส่วนบนของไฟล์
 import 'package:http/http.dart'; // ควรมีการ import นี้ด้วย เพราะ web3dart ใช้งาน http package
 import 'package:web3dart/web3dart.dart' as web3;
 
@@ -31,8 +31,8 @@ class SubjectDetailNisit extends StatefulWidget {
 }
 
 class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
-  int rewardAmount = 0;
-  int balanceInt = 0;
+  double rewardAmount = 0.2;
+  BigInt? balanceInt;
   late final String currentUserUid;
   late final String subjectDocId;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -51,33 +51,8 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
     subjectDocId = widget.docId;
     getCurrentUser();
     _getLocation();
-    _fetchBlockchainData(); // Call this method to get the current location.
-  }
 
-  Future<void> _fetchBlockchainData() async {
-    BigInt? balance; // ประกาศตัวแปร balance และให้ค่าเริ่มต้นเป็น null
-
-    try {
-      // ... ทำการเรียกใช้ Smart Contract
-
-      final date = DateTime.now().millisecondsSinceEpoch;
-      final rewardAmount = 1;
-      // ทำการ send transaction และ get balance
-
-      // กำหนดค่าให้ state variable และ rebuild widget ในบริบที่เหมาะสม
-      setState(() {
-        this.rewardAmount = rewardAmount;
-      });
-
-      // ตรวจสอบค่า balance และแปลงเป็น int หากมีการใช้งาน balance
-      if (balance != null) {
-        setState(() {
-          this.balanceInt = balance.toInt();
-        });
-      }
-    } catch (e) {
-      print('Error fetching blockchain data: $e');
-    }
+    // Call this method to get the current location.
   }
 
   Future<void> getCurrentUser() async {
@@ -173,22 +148,9 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       final email = userDoc.get('email') ?? "";
       final studentId = userDoc.get('studentId') ?? "";
 
-      final newCheckIn = {
-        'time': DateTime.now(),
-        'uid': currentUserUid,
-        'name': username,
-        'email': email,
-        'studentId': studentId,
-        'status': status,
-      };
+      final client = web3.Web3Client('http://10.0.2.2:7545', Client());
 
-      await attendanceScheduleRef.update({
-        'studentsChecked': FieldValue.arrayUnion([newCheckIn])
-      });
-
-      final client = web3.Web3Client('http://127.0.0.1:7545', Client());
-
-      final contractAbi = [
+      final contractAbiList = [
         {
           "inputs": [
             {"internalType": "address", "name": "", "type": "address"},
@@ -253,37 +215,70 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
       final credentials = await client.credentialsFromPrivateKey(
           'fd5bcfb24142af3a56e0a3be965f40448a9f3fd1f1517f8872b0a456446587c5');
+      final contractAbi = web3.ContractAbi.fromJson(
+          jsonEncode(contractAbiList), 'AttendanceContract');
       final contract = web3.DeployedContract(contractAbi, contractAddress);
 
-      final date =
-          DateTime.now().millisecondsSinceEpoch; // Timestamp ของวันปัจจุบัน
-      final rewardAmount = 1; // จำนวนเหรียญที่คุณต้องการให้นักเรียนได้รับ
+      final dateBigInt = BigInt.from(DateTime.now().millisecondsSinceEpoch);
+
+      final rewardAmount = 0.2; // จำนวนเหรียญที่คุณต้องการให้นักเรียนได้รับ
       final checkRewardFunction = contract.function('checkAttendanceAndReward');
       final getBalanceFunction = contract.function('getBalance');
 
+      // ignore: unused_local_variable
       final response = await client.sendTransaction(
         credentials,
         web3.Transaction.callContract(
           contract: contract,
           function: checkRewardFunction,
-          parameters: [date, rewardAmount],
+          parameters: [
+            dateBigInt,
+            BigInt.from((rewardAmount * 1e18)
+                .toInt()) // ใช้ BigInt ที่แปลงจาก 0.2 Ether ไปเป็น Wei แล้ว
+          ],
         ),
       );
 
       final balance = await client.call(
         contract: contract,
         function: getBalanceFunction,
-        params: [], // getBalance ไม่ต้องการ parameters
+        params: [],
       );
 
-      // Log the balance
+      if (balance is List && balance.isNotEmpty && balance[0] is BigInt) {
+        final balanceInt = balance[0] as BigInt;
+        // Now, proceed with the `balanceInt`
+        print('Balance: $balanceInt');
+      } else {
+        // Handle the error appropriately, may log it or show to the user.
+        print(
+            'Error: Unable to fetch balance or balance is not of type BigInt');
+      }
 
-      print('Transaction Response: $response'); // Log the transaction response
-      print('Transaction Response: $balance'); // Log the transaction  balance
+      final newCheckIn = {
+        'time': DateTime.now(),
+        'uid': currentUserUid,
+        'name': username,
+        'email': email,
+        'studentId': studentId,
+        'status': status,
+        'rewardAmount': rewardAmount,
+        'balanceInt': balanceInt,
+      };
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Check-in Successful!'),
-      ));
+      await attendanceScheduleRef.update({
+        'studentsChecked': FieldValue.arrayUnion([newCheckIn])
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            balanceInt != null
+                ? 'Check-in Successful! You received $rewardAmount tokens. Your new balance is ${balanceInt! / BigInt.from(1e18)} tokens.'
+                : 'Check-in Successful! You received $rewardAmount tokens. However, we could not retrieve your new balance.',
+          ),
+        ),
+      );
     } catch (e) {
       print('Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -464,98 +459,16 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                                     'เวลา ${DateFormat('HH:mm').format(time)}'),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-            StreamBuilder<DocumentSnapshot>(
-              stream: _firestore
-                  .collection('users')
-                  .doc(widget.uidTeacher)
-                  .collection('subjects')
-                  .doc(subjectDocId)
-                  .collection('attendanceSchedules')
-                  .doc(DateTime.now().toIso8601String().split('T')[0])
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  print('StreamBuilder waiting for data...');
-                  return CircularProgressIndicator();
-                }
-
-                if (!snapshot.hasData || !snapshot.data!.exists) {
-                  return Text('No data available.');
-                }
-
-                final data = snapshot.data!.data() as Map<String, dynamic>;
-                final List<dynamic>? studentsChecked = data['studentsChecked'];
-
-                if (studentsChecked == null || studentsChecked.isEmpty) {
-                  return Text('No check-ins yet.');
-                }
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: studentsChecked
-                      .where((student) => student['uid'] == currentUserUid)
-                      .length, // กรองตัวเลือกรายการที่ uid ตรงกัน
-                  itemBuilder: (context, index) {
-                    final checkIn =
-                        studentsChecked
-                                .where((student) =>
-                                    student['uid'] == currentUserUid)
-                                .toList()[index]
-                            as Map<String,
-                                dynamic>; // กรองตัวเลือกรายการที่ uid ตรงกัน
-                    final DateTime time = checkIn['time'].toDate();
-                    return Card(
-                      margin: const EdgeInsets.all(8.0),
-                      elevation: 4.0,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'ชื่อ ${checkIn['name']}',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'ชื่อวิชา ${widget.subjectName} รหัสวิชา ${widget.subjectCode} หมู่เรียน ${widget.subjectGroup}',
-                              style: TextStyle(fontSize: 14),
-                            ),
-                            SizedBox(height: 8),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'สภานะ ${checkIn['status'] == 'attended' ? 'มาเรียน' : 'ลา'}',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      color: checkIn['status'] == 'attended'
-                                          ? Colors.green
-                                          : Color.fromARGB(255, 65, 59, 153)),
-                                ),
-                                Text(
-                                    'เวลา ${DateFormat('HH:mm').format(time)}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'เหรียญที่ได้รับ: $rewardAmount', // replace with actual amount
+                                  'เหรียญที่ได้รับ: ${rewardAmount.toStringAsFixed(2)}',
                                   style: TextStyle(
                                       fontSize: 14, color: Colors.green),
                                 ),
-                                Text('เหรียญที่มีอยู่: $balanceInt'),
+                                Text(
+                                    'เหรียญที่มีอยู่: ${balanceInt != null ? (balanceInt! / BigInt.from(1e18)).toStringAsFixed(2) : 'Loading...'}'),
                               ],
                             )
                           ],
