@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../screen_login_user_all/login.dart';
 
+import '../screen_nisit/RedeemRewards_nisit.dart';
 import '../screen_nisit/history_nisit.dart';
 import '../screen_nisit/user_nisit.dart';
 import 'Profile.dart';
@@ -93,6 +94,21 @@ class DrawerBarNisit extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => Profile(),
+                ),
+              );
+            },
+          ),
+            const SizedBox(
+            height: 20,
+          ),
+            _buildDrawerItem(
+            title: 'แลกของรางวัล',
+            icon: Icons.add_shopping_cart,
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RedeemRewards(uid: '',),
                 ),
               );
             },
