@@ -33,8 +33,8 @@ class SubjectDetailNisit extends StatefulWidget {
 }
 
 class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
-  double rewardAmount = 0.2;
-  BigInt? balanceInt;
+  // double rewardAmount = 0.2;
+  // BigInt? balanceInt;
   late final String currentUserUid;
   late final String subjectDocId;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -155,176 +155,176 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       final email = userDoc.get('email') ?? "";
       final studentId = userDoc.get('studentId') ?? "";
 
-      final client = web3.Web3Client('http://10.0.2.2:8545', Client());
+      // final client = web3.Web3Client('http://10.0.2.2:8545', Client());
 
-      final contractAbiList = [
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "student",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "date",
-              "type": "uint256"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "rewardAmount",
-              "type": "uint256"
-            }
-          ],
-          "name": "CheckedIn",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "student",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "SpentCoin",
-          "type": "event"
-        },
-        {
-          "inputs": [
-            {"internalType": "address", "name": "", "type": "address"},
-            {"internalType": "uint256", "name": "", "type": "uint256"}
-          ],
-          "name": "attendanceRecords",
-          "outputs": [
-            {"internalType": "bool", "name": "", "type": "bool"}
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {"internalType": "address", "name": "", "type": "address"}
-          ],
-          "name": "balances",
-          "outputs": [
-            {"internalType": "uint256", "name": "", "type": "uint256"}
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {"internalType": "uint256", "name": "date", "type": "uint256"},
-            {
-              "internalType": "uint256",
-              "name": "rewardAmount",
-              "type": "uint256"
-            }
-          ],
-          "name": "checkAttendanceAndReward",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {"internalType": "address", "name": "student", "type": "address"},
-            {"internalType": "uint256", "name": "date", "type": "uint256"}
-          ],
-          "name": "isAttended",
-          "outputs": [
-            {"internalType": "bool", "name": "", "type": "bool"}
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "getBalance",
-          "outputs": [
-            {"internalType": "uint256", "name": "", "type": "uint256"}
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {"internalType": "uint256", "name": "amount", "type": "uint256"}
-          ],
-          "name": "spendCoin",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        }
-      ];
-      final contractAddress = web3.EthereumAddress.fromHex(
-          '0x2eFD35Fc72B4d90E135e6b3E0428f911e73C12E1');
+      // final contractAbiList = [
+      //   {
+      //     "anonymous": false,
+      //     "inputs": [
+      //       {
+      //         "indexed": true,
+      //         "internalType": "address",
+      //         "name": "student",
+      //         "type": "address"
+      //       },
+      //       {
+      //         "indexed": false,
+      //         "internalType": "uint256",
+      //         "name": "date",
+      //         "type": "uint256"
+      //       },
+      //       {
+      //         "indexed": false,
+      //         "internalType": "uint256",
+      //         "name": "rewardAmount",
+      //         "type": "uint256"
+      //       }
+      //     ],
+      //     "name": "CheckedIn",
+      //     "type": "event"
+      //   },
+      //   {
+      //     "anonymous": false,
+      //     "inputs": [
+      //       {
+      //         "indexed": true,
+      //         "internalType": "address",
+      //         "name": "student",
+      //         "type": "address"
+      //       },
+      //       {
+      //         "indexed": false,
+      //         "internalType": "uint256",
+      //         "name": "amount",
+      //         "type": "uint256"
+      //       }
+      //     ],
+      //     "name": "SpentCoin",
+      //     "type": "event"
+      //   },
+      //   {
+      //     "inputs": [
+      //       {"internalType": "address", "name": "", "type": "address"},
+      //       {"internalType": "uint256", "name": "", "type": "uint256"}
+      //     ],
+      //     "name": "attendanceRecords",
+      //     "outputs": [
+      //       {"internalType": "bool", "name": "", "type": "bool"}
+      //     ],
+      //     "stateMutability": "view",
+      //     "type": "function"
+      //   },
+      //   {
+      //     "inputs": [
+      //       {"internalType": "address", "name": "", "type": "address"}
+      //     ],
+      //     "name": "balances",
+      //     "outputs": [
+      //       {"internalType": "uint256", "name": "", "type": "uint256"}
+      //     ],
+      //     "stateMutability": "view",
+      //     "type": "function"
+      //   },
+      //   {
+      //     "inputs": [
+      //       {"internalType": "uint256", "name": "date", "type": "uint256"},
+      //       {
+      //         "internalType": "uint256",
+      //         "name": "rewardAmount",
+      //         "type": "uint256"
+      //       }
+      //     ],
+      //     "name": "checkAttendanceAndReward",
+      //     "outputs": [],
+      //     "stateMutability": "nonpayable",
+      //     "type": "function"
+      //   },
+      //   {
+      //     "inputs": [
+      //       {"internalType": "address", "name": "student", "type": "address"},
+      //       {"internalType": "uint256", "name": "date", "type": "uint256"}
+      //     ],
+      //     "name": "isAttended",
+      //     "outputs": [
+      //       {"internalType": "bool", "name": "", "type": "bool"}
+      //     ],
+      //     "stateMutability": "view",
+      //     "type": "function"
+      //   },
+      //   {
+      //     "inputs": [],
+      //     "name": "getBalance",
+      //     "outputs": [
+      //       {"internalType": "uint256", "name": "", "type": "uint256"}
+      //     ],
+      //     "stateMutability": "view",
+      //     "type": "function"
+      //   },
+      //   {
+      //     "inputs": [
+      //       {"internalType": "uint256", "name": "amount", "type": "uint256"}
+      //     ],
+      //     "name": "spendCoin",
+      //     "outputs": [],
+      //     "stateMutability": "nonpayable",
+      //     "type": "function"
+      //   }
+      // ];
+      // final contractAddress = web3.EthereumAddress.fromHex(
+      //     '0x2eFD35Fc72B4d90E135e6b3E0428f911e73C12E1');
 
-      final credentials = await client.credentialsFromPrivateKey(
-          '7868d1e4d98b02b48d352e615b8c4abcb49d8cacc37c1f57ed263e69825a671f');
-      final contractAbi = web3.ContractAbi.fromJson(
-          jsonEncode(contractAbiList), 'AttendanceContract');
-      final contract = web3.DeployedContract(contractAbi, contractAddress);
+      // final credentials = await client.credentialsFromPrivateKey(
+      //     '7868d1e4d98b02b48d352e615b8c4abcb49d8cacc37c1f57ed263e69825a671f');
+      // final contractAbi = web3.ContractAbi.fromJson(
+      //     jsonEncode(contractAbiList), 'AttendanceContract');
+      // final contract = web3.DeployedContract(contractAbi, contractAddress);
 
-      final dateBigInt = BigInt.from(DateTime.now().millisecondsSinceEpoch);
+      // final dateBigInt = BigInt.from(DateTime.now().millisecondsSinceEpoch);
 
-      final rewardAmount = 0.02; // จำนวนเหรียญที่คุณต้องการให้นักเรียนได้รับ
-      final checkRewardFunction = contract.function('checkAttendanceAndReward');
-      print(checkRewardFunction);
-      final getBalanceFunction = contract.function('getBalance');
-      print(getBalanceFunction);
-      // ignore: unused_local_variable
-      final response = await client.sendTransaction(
-        credentials,
-        web3.Transaction.callContract(
-          contract: contract,
-          function: checkRewardFunction,
-          parameters: [
-            dateBigInt,
-            BigInt.from((rewardAmount * 1e18)
-                .toInt()) // ใช้ BigInt ที่แปลงจาก 0.2 Ether ไปเป็น Wei แล้ว
-          ],
-        ),
-      );
-      final parameters = [
-        dateBigInt,
-        BigInt.from((rewardAmount * 1e18)
-            .toInt()) // ใช้ BigInt ที่แปลงจาก 0.2 Ether ไปเป็น Wei แล้ว
-      ];
-      print(parameters);
+      // final rewardAmount = 0.02; // จำนวนเหรียญที่คุณต้องการให้นักเรียนได้รับ
+      // final checkRewardFunction = contract.function('checkAttendanceAndReward');
+      // print(checkRewardFunction);
+      // final getBalanceFunction = contract.function('getBalance');
+      // print(getBalanceFunction);
+      // // ignore: unused_local_variable
+      // final response = await client.sendTransaction(
+      //   credentials,
+      //   web3.Transaction.callContract(
+      //     contract: contract,
+      //     function: checkRewardFunction,
+      //     parameters: [
+      //       dateBigInt,
+      //       BigInt.from((rewardAmount * 1e18)
+      //           .toInt()) // ใช้ BigInt ที่แปลงจาก 0.2 Ether ไปเป็น Wei แล้ว
+      //     ],
+      //   ),
+      // );
+      // final parameters = [
+      //   dateBigInt,
+      //   BigInt.from((rewardAmount * 1e18)
+      //       .toInt()) // ใช้ BigInt ที่แปลงจาก 0.2 Ether ไปเป็น Wei แล้ว
+      // ];
+      // print(parameters);
 
-      print(contract);
-      print(dateBigInt); // แสดงค่าของ dateBigInt
-      print(rewardAmount * 1e18); // แสดงค่าของ rewardAmount ที่ถูกแปลงเป็น Wei
-      print(response);
-      print(status);
-      print(credentials);
-      print(client);
-      print(contractAbi);
-      print(contractAddress);
-      print(credentials);
-      final balance = await client
-          .call(contract: contract, function: getBalanceFunction, params: []);
-      if (balance is List && balance.isNotEmpty && balance[0] is BigInt) {
-        final balanceInt = balance[0] as BigInt;
-        print('Balance: $balanceInt');
-      } else {
-        print(
-            'Error: Unable to fetch balance or balance is not of type BigInt');
-      }
+      // print(contract);
+      // print(dateBigInt); // แสดงค่าของ dateBigInt
+      // print(rewardAmount * 1e18); // แสดงค่าของ rewardAmount ที่ถูกแปลงเป็น Wei
+      // print(response);
+      // print(status);
+      // print(credentials);
+      // print(client);
+      // print(contractAbi);
+      // print(contractAddress);
+      // print(credentials);
+      // final balance = await client
+      //     .call(contract: contract, function: getBalanceFunction, params: []);
+      // if (balance is List && balance.isNotEmpty && balance[0] is BigInt) {
+      //   final balanceInt = balance[0] as BigInt;
+      //   print('Balance: $balanceInt');
+      // } else {
+      //   print(
+      //       'Error: Unable to fetch balance or balance is not of type BigInt');
+      // }
 
       final newCheckIn = {
         'time': DateTime.now(),
@@ -333,8 +333,9 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         'email': email,
         'studentId': studentId,
         'status': status,
-        'rewardAmount': rewardAmount,
-        'balanceInt': balanceInt,
+
+        // 'rewardAmount': rewardAmount,
+        // 'balanceInt': balanceInt,
       };
 
       await attendanceScheduleRef.update({
@@ -342,13 +343,13 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       });
       print('Updated Firestore with new check-in data.');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(balanceInt != null
-              ? 'Your new balance is ${balanceInt! / BigInt.from(1e18)} tokens.'
-              : 'However, we could not retrieve your new balance.'),
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text(balanceInt != null
+      //         ? 'Your new balance is ${balanceInt! / BigInt.from(1e18)} tokens.'
+      //         : 'However, we could not retrieve your new balance.'),
+      //   ),
+      // );
     } catch (e) {
       print('Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -530,18 +531,18 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                                     'เวลา ${DateFormat('HH:mm').format(time)}'),
                               ],
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'เหรียญที่ได้รับ: ${rewardAmount.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.green),
-                                ),
-                                Text(
-                                    'เหรียญที่มีอยู่: ${balanceInt != null ? (balanceInt! / BigInt.from(1e18)).toStringAsFixed(2) : 'Loading...'}'),
-                              ],
-                            )
+                            // Row(
+                            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            //   children: [
+                            //     Text(
+                            //       'เหรียญที่ได้รับ: ${rewardAmount.toStringAsFixed(2)}',
+                            //       style: TextStyle(
+                            //           fontSize: 14, color: Colors.green),
+                            //     ),
+                            //     Text(
+                            //         'เหรียญที่มีอยู่: ${balanceInt != null ? (balanceInt! / BigInt.from(1e18)).toStringAsFixed(2) : 'Loading...'}'),
+                            //   ],
+                            // )
                           ],
                         ),
                       ),

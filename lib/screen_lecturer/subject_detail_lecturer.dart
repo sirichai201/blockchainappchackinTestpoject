@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'chackin.dart';
 
 class SubjectDetail extends StatefulWidget {
@@ -33,12 +32,12 @@ class _SubjectDetailState extends State<SubjectDetail> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      title: FutureBuilder<DocumentSnapshot>(
-        future: subjects
+      title: StreamBuilder<DocumentSnapshot>(
+        stream: subjects
             .doc(widget.userId)
             .collection('subjects')
             .doc(widget.docId)
-            .get(),
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Text("Loading...");
@@ -69,12 +68,12 @@ class _SubjectDetailState extends State<SubjectDetail> {
   Padding _buildBody() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: FutureBuilder<DocumentSnapshot>(
-        future: subjects
+      child: StreamBuilder<DocumentSnapshot>(
+        stream: subjects
             .doc(widget.userId)
             .collection('subjects')
             .doc(widget.docId)
-            .get(),
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const CircularProgressIndicator();
@@ -114,7 +113,6 @@ class _SubjectDetailState extends State<SubjectDetail> {
     );
   }
 
-  // สำหรับ _pendingStudentsDropdown
   Container _pendingStudentsDropdown(List<dynamic> pendingStudents) {
     return Container(
       padding: EdgeInsets.all(8.0),
@@ -123,13 +121,11 @@ class _SubjectDetailState extends State<SubjectDetail> {
         border: Border.all(color: Colors.orangeAccent),
       ),
       child: DropdownButton<dynamic>(
-        // <-- ที่นี่เปลี่ยนเป็น dynamic
         hint: Text('Pending Students:'),
         onChanged: (value) {},
         items: pendingStudents.map((student) {
-          // <-- ใช้ชื่อว่า student แทน studentUid
           return DropdownMenuItem<dynamic>(
-            value: student, // ให้ value เป็น map แทนที่จะเป็น string
+            value: student,
             child: Row(
               children: [
                 Text('${student['name']} (${student['email']})'),
@@ -140,8 +136,7 @@ class _SubjectDetailState extends State<SubjectDetail> {
                 ),
                 IconButton(
                   icon: Icon(Icons.close, color: Colors.red),
-                  onPressed: () => rejectStudent(student[
-                      'uid']), // <-- ใช้ student['uid'] แทนที่จะเป็น student
+                  onPressed: () => rejectStudent(student['uid']),
                 ),
               ],
             ),
@@ -164,8 +159,7 @@ class _SubjectDetailState extends State<SubjectDetail> {
         items: approvedStudents.map((student) {
           return DropdownMenuItem<dynamic>(
             value: student,
-            child: Text(
-                '${student['name']} (${student['email']})'), // แสดงชื่อและ email
+            child: Text('${student['name']} (${student['email']})'),
           );
         }).toList(),
       ),
@@ -181,46 +175,68 @@ class _SubjectDetailState extends State<SubjectDetail> {
         .get();
     Map<String, dynamic> subject = subjectDoc.data() as Map<String, dynamic>;
 
+    List<dynamic> pendingStudents = subject['pendingStudents'] ?? [];
+
     await subjects
         .doc(widget.userId)
         .collection('subjects')
         .doc(widget.docId)
         .update({
-      'students': FieldValue.arrayUnion([
-        {'uid': studentUid, 'name': studentName, 'email': studentEmail}
-      ]),
-      'pendingStudents': FieldValue.arrayRemove([
-        {'uid': studentUid, 'name': studentName, 'email': studentEmail}
-      ])
+      'students': FieldValue.arrayUnion(pendingStudents), // ย้ายทั้งหมดมาที่นี่
+      'pendingStudents':
+          FieldValue.arrayRemove(pendingStudents) // ลบทั้งหมดออกจากนี่
     });
 
-    await subjects
-        .doc(studentUid)
-        .collection('enrolledSubjects')
-        .doc(widget.docId)
-        .set({
-      'name': subject['name'],
-      'code': subject['code'],
-      'group': subject['group'],
-      'uidTeacher': widget.userId
-    });
+    // ต้องทำ Loop ต่อไปนี้เพื่ออัพเดทข้อมูลใน collection 'enrolledSubjects' ของแต่ละนิสิต
+    for (var student in pendingStudents) {
+      var studentData = student as Map<String, dynamic>;
+      await subjects
+          .doc(studentData['uid'])
+          .collection('enrolledSubjects')
+          .doc(widget.docId)
+          .set({
+        'name': subject['name'],
+        'code': subject['code'],
+        'group': subject['group'],
+        'uidTeacher': widget.userId
+      });
+    }
 
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('ได้ยืนยันเรียบร้อยแล้ว')));
-    setState(() {});
   }
 
   Future<void> rejectStudent(String studentUid) async {
-    await subjects
+    DocumentSnapshot subjectDoc = await subjects
         .doc(widget.userId)
         .collection('subjects')
         .doc(widget.docId)
-        .update({
-      'pendingStudents': FieldValue.arrayRemove([studentUid])
-    });
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('ลบเรียบร้อยแล้ว')));
-    setState(() {});
+        .get();
+    Map<String, dynamic> subject = subjectDoc.data() as Map<String, dynamic>;
+
+    List<dynamic> pendingStudents = subject['pendingStudents'] ?? [];
+    var studentToRemove;
+
+    for (var student in pendingStudents) {
+      var studentData = student as Map<String, dynamic>;
+      if (studentData['uid'] == studentUid) {
+        studentToRemove = studentData;
+        break;
+      }
+    }
+
+    if (studentToRemove != null) {
+      await subjects
+          .doc(widget.userId)
+          .collection('subjects')
+          .doc(widget.docId)
+          .update({
+        'pendingStudents': FieldValue.arrayRemove([studentToRemove])
+      });
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('ลบเรียบร้อยแล้ว')));
+    }
   }
 
   void _navigateToCheckInPage() {

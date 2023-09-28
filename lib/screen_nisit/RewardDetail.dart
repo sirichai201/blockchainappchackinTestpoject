@@ -20,23 +20,24 @@ class RewardDetail extends StatelessWidget {
           if (rewardData['imageUrl'] != null &&
               rewardData['imageUrl'] is String)
             Image.network(rewardData['imageUrl'] as String),
-          Text(rewardData['name'] ?? 'คีย์บอร์ดเกมมิ่ง รุ่น ALISTAR X33'),
-          Text('Cost: ${rewardData['cost'] ?? 'Unknown'} coins'),
-          Container(
-            width: 100.0,
-            height: 100.0,
-            child: (rewardData['imageUrl'] != null &&
-                    rewardData['imageUrl'] is String)
-                ? Image.network(rewardData['imageUrl'] as String,
-                    fit: BoxFit.cover)
-                : const Placeholder(),
+          SizedBox(
+            height: 20,
           ),
-          ElevatedButton(
-            onPressed: () {
-              RedeemRewards.showRedeemDialog(
-                  context, rewardData['id'] ?? '', rewardData);
-            },
-            child: Text('ยืนยันการแลก'),
+          Center(
+              child: Text(
+                  rewardData['name'] ?? 'คีย์บอร์ดเกมมิ่ง รุ่น ALISTAR X33')),
+          Center(child: Text('Cost: ${rewardData['cost'] ?? 'Unknown'} coins')),
+          SizedBox(
+            height: 20,
+          ),
+          Center(
+            child: ElevatedButton(
+              onPressed: () {
+                RedeemRewards.showRedeemDialog(
+                    context, rewardData['id'] ?? '', rewardData);
+              },
+              child: Text('ยืนยันการแลก'),
+            ),
           ),
         ],
       ),

@@ -108,12 +108,13 @@ class _UserNisitState extends State<UserNisit> {
             context,
             MaterialPageRoute(
               builder: (context) => SubjectDetailNisit(
-                  userId: currentUserUid,
-                  docId: docId,
-                  subjectName: subject['name'], // ส่งชื่อวิชา
-                  subjectCode: subject['code'], // ส่งรหัสวิชา
-                  subjectGroup: subject['group'], // ส่งหมู่เรียน
-                  uidTeacher: subject['uidTeacher']),
+                userId: currentUserUid,
+                docId: docId,
+                subjectName: subject['name'], // ส่งชื่อวิชา
+                subjectCode: subject['code'], // ส่งรหัสวิชา
+                subjectGroup: subject['group'], // ส่งหมู่เรียน
+                uidTeacher: subject['uidTeacher'],
+              ),
             ),
           );
         },
@@ -200,7 +201,7 @@ class _UserNisitState extends State<UserNisit> {
 
     String currentUserName = userData.data()?['Username'];
     String currentUserEmail = userData.data()?['email'];
-
+    String currentstudentId = userData.data()?['studentId'];
     if (query.docs.isNotEmpty) {
       var subjectData = query.docs.first.data();
       String subjectName = subjectData['name'];
@@ -223,11 +224,10 @@ class _UserNisitState extends State<UserNisit> {
             .update({
           'pendingStudents': FieldValue.arrayUnion([
             {
-              'uid': currentUserUid,
-              'name':
-                  currentUserName, // ค่านี้ควรมาจากตัวแปรที่เก็บชื่อของนิสิต
-              'email':
-                  currentUserEmail, // ค่านี้ควรมาจากตัวแปรที่เก็บอีเมลของนิสิต
+              'uid': currentUserUid, //ส่งค่าdoc.idของนิสิต
+              'name': currentUserName, //ส่งค่า Username
+              'email': currentUserEmail, //ส่งค่าemail
+              'studentId': currentstudentId, // ส่งค่า studentId
             }
           ])
         });
