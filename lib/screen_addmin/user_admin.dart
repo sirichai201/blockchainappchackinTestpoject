@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../screen_login_user_all/login.dart';
+import '../screen_nisit/RedeemRewards_nisit.dart';
 import 'caeate_user.dart';
 
 class UserAdmin extends StatelessWidget {
@@ -42,7 +43,10 @@ class UserAdmin extends StatelessWidget {
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => CreateUser()),
+                    MaterialPageRoute(
+                        builder: (context) => RedeemRewards(
+                              uid: '',
+                            )),
                   );
                 },
                 child: Text('จัดการของราวัล'),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 import '../gobal/drawerbar_nisit.dart';
+import '../screen_addmin/user_admin.dart';
 
 class RedeemRewards extends StatelessWidget {
   final String uid;
@@ -10,13 +10,14 @@ class RedeemRewards extends StatelessWidget {
 
   RedeemRewards({required this.uid});
 
-  static Future<void> showRedeemDialog(
-      BuildContext context, String rewardId, Map<String, dynamic> rewardData) async {
+  static Future<void> showRedeemDialog(BuildContext context, String rewardId,
+      Map<String, dynamic> rewardData) async {
     bool? isFirstConfirmation = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('ยืนยันการแลก'),
-        content: Text('คุณต้องการแลก ${rewardData['name']} ใช้เหรียญ ${rewardData['cost']} coins หรือไม่?'),
+        content: Text(
+            'คุณต้องการแลก ${rewardData['name']} ใช้เหรียญ ${rewardData['cost']} coins หรือไม่?'),
         actions: [
           TextButton(
             child: Text('ยกเลิก'),
@@ -58,8 +59,14 @@ class RedeemRewards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('RedeemRewards')),
-      drawer: const DrawerBarNisit(),
+      appBar: AppBar(
+          leading: IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.pushReplacement(context,
+                    MaterialPageRoute(builder: (context) => UserAdmin()));
+              }),
+          title: Text('RedeemRewards')),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore.collection('rewards').snapshots(),
         builder: (context, snapshot) {
@@ -79,14 +86,17 @@ class RedeemRewards extends StatelessWidget {
               final rewardData = reward.data() as Map<String, dynamic>;
 
               return ListTile(
-                leading: (rewardData['imageUrl'] != null && rewardData['imageUrl'] is String)
+                leading: (rewardData['imageUrl'] != null &&
+                        rewardData['imageUrl'] is String)
                     ? Image.network(rewardData['imageUrl'] as String)
                     : null,
                 title: Text(rewardData['name'] ?? 'Unknown'),
-                subtitle: Text('Cost: ${rewardData['cost'] ?? 'Unknown'} coins'),
+                subtitle:
+                    Text('Cost: ${rewardData['cost'] ?? 'Unknown'} coins'),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => RewardDetailPage(rewardData: rewardData, uid: uid),
+                    builder: (context) =>
+                        RewardDetailPage(rewardData: rewardData, uid: uid),
                   ),
                 ),
               );
@@ -113,20 +123,24 @@ class RewardDetailPage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (rewardData['imageUrl'] != null && rewardData['imageUrl'] is String)
+          if (rewardData['imageUrl'] != null &&
+              rewardData['imageUrl'] is String)
             Image.network(rewardData['imageUrl'] as String),
           Text(rewardData['name'] ?? 'คีย์บอร์ดเกมมิ่ง รุ่น ALISTAR X33'),
           Text('Cost: ${rewardData['cost'] ?? 'Unknown'} coins'),
           Container(
             width: 100.0,
             height: 100.0,
-            child: (rewardData['imageUrl'] != null && rewardData['imageUrl'] is String)
-              ? Image.network(rewardData['imageUrl'] as String, fit: BoxFit.cover)
-              : const Placeholder(),
+            child: (rewardData['imageUrl'] != null &&
+                    rewardData['imageUrl'] is String)
+                ? Image.network(rewardData['imageUrl'] as String,
+                    fit: BoxFit.cover)
+                : const Placeholder(),
           ),
           ElevatedButton(
             onPressed: () {
-              RedeemRewards.showRedeemDialog(context, rewardData['id'] ?? '', rewardData);
+              RedeemRewards.showRedeemDialog(
+                  context, rewardData['id'] ?? '', rewardData);
             },
             child: Text('ยืนยันการแลก'),
           ),
