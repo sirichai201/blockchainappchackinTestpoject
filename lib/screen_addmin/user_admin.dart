@@ -22,21 +22,34 @@ class UserAdmin extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // ปุ่มสำหรับการสร้างบัญชี
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => CreateUser()),
-                );
-              },
-              child: Text('สร้างบัญชี'),
-            ),
-
-            // คุณสามารถเพิ่มปุ่มหรือวิดเจ็ตอื่นๆ ที่ต้องการได้ที่นี่
-          ],
+        child: Center(
+          child: Column(
+            children: [
+              // ปุ่มสำหรับการสร้างบัญชี
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => CreateUser()),
+                  );
+                },
+                child: Text('สร้างบัญชี'),
+              ),
+              SizedBox(
+                height: 20,
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => CreateUser()),
+                  );
+                },
+                child: Text('จัดการของราวัล'),
+              ),
+              // คุณสามารถเพิ่มปุ่มหรือวิดเจ็ตอื่นๆ ที่ต้องการได้ที่นี่
+            ],
+          ),
         ),
       ),
     );

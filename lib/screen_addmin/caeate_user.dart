@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../screen_login_user_all/login.dart';
-import 'user_admin.dart';
 
 /// หน้าสร้างบัญชีผู้ใช้
 class CreateUser extends StatefulWidget {
