@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../screen_login_user_all/login.dart';
-import '../screen_nisit/Profile_nisit.dart';
+
 import '../screen_nisit/history_nisit.dart';
 import '../screen_nisit/user_nisit.dart';
+import 'Profile.dart';
 
 class DrawerBarNisit extends StatelessWidget {
   const DrawerBarNisit({super.key});
@@ -85,15 +86,15 @@ class DrawerBarNisit extends StatelessWidget {
             height: 20,
           ),
           _buildDrawerItem(
-            title: 'profile_nisit',
+            title: 'profile',
             icon: Icons.manage_accounts,
             onTap: () {
-              // Navigator.pushReplacement(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => ProfileNisitScreen(),
-              //   ),
-              // );
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Profile(),
+                ),
+              );
             },
           ),
           const SizedBox(

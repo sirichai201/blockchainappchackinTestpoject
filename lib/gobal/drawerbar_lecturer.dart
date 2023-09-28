@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../screen_lecturer/history_lecturer.dart';
 import '../screen_lecturer/User_lecturer.dart';
 import '../screen_login_user_all/login.dart';
+import 'Profile.dart';
 
 class DrawerbarLecturer extends StatelessWidget {
   const DrawerbarLecturer({super.key});
@@ -54,6 +55,18 @@ class DrawerbarLecturer extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => UserLecturer()),
             ),
+          ),
+          _buildDrawerItem(
+            title: 'profile',
+            icon: Icons.manage_accounts,
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Profile(),
+                ),
+              );
+            },
           ),
           // _buildDrawerItem(
           //   title: 'ประวัติการเข้าเรียน',
