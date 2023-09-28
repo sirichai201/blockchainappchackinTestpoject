@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../screen_login_user_all/login.dart';
 
-import '../screen_nisit/RedeemRewards_nisit.dart';
+import '../screen_nisit/RedeemRewards.dart';
 import '../screen_nisit/history_nisit.dart';
 import '../screen_nisit/user_nisit.dart';
 import 'Profile.dart';

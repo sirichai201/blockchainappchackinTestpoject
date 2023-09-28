@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../gobal/drawerbar_nisit.dart';
+
 import '../screen_addmin/user_admin.dart';
 
-class RedeemRewards extends StatelessWidget {
+class RedeemRewardsadmin extends StatelessWidget {
   final String uid;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  RedeemRewards({required this.uid});
+  RedeemRewardsadmin({required this.uid});
 
   static Future<void> showRedeemDialog(BuildContext context, String rewardId,
       Map<String, dynamic> rewardData) async {
@@ -139,7 +139,7 @@ class RewardDetailPage extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              RedeemRewards.showRedeemDialog(
+              RedeemRewardsadmin.showRedeemDialog(
                   context, rewardData['id'] ?? '', rewardData);
             },
             child: Text('ยืนยันการแลก'),
