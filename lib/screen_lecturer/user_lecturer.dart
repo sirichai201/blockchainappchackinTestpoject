@@ -61,28 +61,55 @@ class _UserLecturerState extends State<UserLecturer> {
     TextEditingController codeController = TextEditingController();
     TextEditingController nameController = TextEditingController();
     TextEditingController groupController = TextEditingController();
+    TextEditingController yearController = TextEditingController();
+    String? selectedTerm;
 
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('เพิ่มรายวิชาใหม่'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: codeController,
-                decoration: const InputDecoration(labelText: 'รหัสวิชา'),
-              ),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'ชื่อรายวิชา'),
-              ),
-              TextField(
-                controller: groupController,
-                decoration: const InputDecoration(labelText: 'หมู่เรียน'),
-              ),
-            ],
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: codeController,
+                    decoration: const InputDecoration(labelText: 'รหัสวิชา'),
+                  ),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'ชื่อรายวิชา'),
+                  ),
+                  TextField(
+                    controller: groupController,
+                    decoration: const InputDecoration(labelText: 'หมู่เรียน'),
+                  ),
+                  TextField(
+                    controller: yearController,
+                    decoration: const InputDecoration(labelText: 'ปีการศึกษา'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  DropdownButton<String>(
+                    value: selectedTerm,
+                    items: ['1', '2']
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text('เทอม $value'),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedTerm = newValue;
+                      });
+                    },
+                    hint: Text('กรุณาเลือกเทอม'),
+                  ),
+                ],
+              );
+            },
           ),
           actions: [
             TextButton(
@@ -94,7 +121,9 @@ class _UserLecturerState extends State<UserLecturer> {
                 String inviteCode = generateInviteCode();
                 if (codeController.text.isNotEmpty &&
                     nameController.text.isNotEmpty &&
-                    groupController.text.isNotEmpty) {
+                    groupController.text.isNotEmpty &&
+                    yearController.text.isNotEmpty &&
+                    selectedTerm != null) {
                   await FirebaseFirestore.instance
                       .collection('users')
                       .doc(userId)
@@ -103,7 +132,9 @@ class _UserLecturerState extends State<UserLecturer> {
                     'code': codeController.text.trim(),
                     'name': nameController.text.trim(),
                     'group': groupController.text.trim(),
-                    'inviteCode': inviteCode, // เพิ่ม field สำหรับเก็บรหัสเชิญ
+                    'year': yearController.text.trim(),
+                    'term': selectedTerm,
+                    'inviteCode': inviteCode,
                     'students': [],
                     'pendingStudents': [],
                     'uidTeacher': userId

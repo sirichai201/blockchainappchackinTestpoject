@@ -5,7 +5,7 @@ import '../screen_login_user_all/login.dart';
 import '../screen_nisit/RedeemRewards.dart';
 import '../screen_nisit/history_nisit.dart';
 import '../screen_nisit/user_nisit.dart';
-import 'Profile.dart';
+import 'Profile_nisit.dart';
 
 class DrawerBarNisit extends StatelessWidget {
   const DrawerBarNisit({super.key});
@@ -98,17 +98,19 @@ class DrawerBarNisit extends StatelessWidget {
               );
             },
           ),
-            const SizedBox(
+          const SizedBox(
             height: 20,
           ),
-            _buildDrawerItem(
+          _buildDrawerItem(
             title: 'แลกของรางวัล',
             icon: Icons.add_shopping_cart,
             onTap: () {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => RedeemRewards(uid: '',),
+                  builder: (context) => RedeemRewards(
+                    uid: '',
+                  ),
                 ),
               );
             },
