@@ -35,7 +35,7 @@ class _RedeemRewardsState extends State<RedeemRewards> {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               final reward = snapshot.data!.docs[index];
-              final imageUrl = reward['imageUrl'] as String? ?? '';
+              final imageUrl = reward['imageUrl'] as String? ?? '';//adada
 
               return ListTile(
                 leading: imageUrl.isNotEmpty
