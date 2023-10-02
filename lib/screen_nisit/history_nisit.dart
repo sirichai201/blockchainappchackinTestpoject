@@ -237,12 +237,7 @@ class _HistoryNisitState extends State<HistoryNisit> {
                     ),
                     const SizedBox(height: 20),
                     // Count summaries
-                    Text(
-                        'นิสิตมาเรียน: ${attendanceList.where((item) => item['status'] == 'attended').length} คน'),
-                    Text(
-                        'นิสิตขาดเรียน: ${attendanceList.where((item) => item['status'] == 'absent').length} คน'),
-                    Text(
-                        'นิสิตลา: ${attendanceList.where((item) => item['status'] == 'leave').length} คน'),
+
                     const SizedBox(height: 20),
                     ...[
                       if (attendanceList.isEmpty)
