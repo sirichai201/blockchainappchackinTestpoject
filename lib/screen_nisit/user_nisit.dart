@@ -4,6 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../gobal/drawerbar_nisit.dart';
 import 'subject_detail_nisit.dart';
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 class UserNisit extends StatefulWidget {
   @override
   _UserNisitState createState() => _UserNisitState();
@@ -19,7 +22,40 @@ class _UserNisitState extends State<UserNisit> {
   void initState() {
     super.initState();
     currentUserUid = _auth.currentUser!.uid;
+    initUserEthereumAddress();
     fetchSubjects();
+  }
+
+  Future<void> initUserEthereumAddress() async {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserUid)
+        .get();
+    final data = userDoc.data() as Map<String, dynamic>?;
+
+    if (data != null &&
+        data.containsKey('ethereumAddress') &&
+        data['ethereumAddress'] != null) {
+      print('User has Ethereum Address: ${data['ethereumAddress']}');
+    } else {
+      final url = Uri.parse('http://10.0.2.2:3000/createEthereumAddress');
+      final response = await http.post(url, body: {'userId': currentUserUid});
+
+      if (response.statusCode == 200) {
+        final newEthereumAddress = jsonDecode(response.body)['ethereumAddress'];
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserUid)
+            .set({
+          'ethereumAddress': newEthereumAddress,
+        }, SetOptions(merge: true));
+
+        print('Created and set new Ethereum Address: $newEthereumAddress');
+      } else {
+        print('Failed to create Ethereum Address: ${response.body}');
+      }
+    }
   }
 
 //สร้างฟังก์ชันในการลบวิชา:

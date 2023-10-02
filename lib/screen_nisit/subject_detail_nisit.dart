@@ -1,16 +1,15 @@
-// ignore_for_file: unnecessary_type_check
+// ignore_for_file: unnecessary_type_check, prefer_const_declarations
 
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
 import 'package:intl/intl.dart'; // สำหรับใช้งาน DateFormat
-import 'dart:convert'; // ให้เพิ่ม import นี้ที่ส่วนบนของไฟล์
-import 'package:http/http.dart'; // ควรมีการ import นี้ด้วย เพราะ web3dart ใช้งาน http package
-import 'package:web3dart/web3dart.dart' as web3;
+// ให้เพิ่ม import นี้ที่ส่วนบนของไฟล์
 
-import 'history_nisit.dart';
+import 'package:http/http.dart' as http;
 
 class SubjectDetailNisit extends StatefulWidget {
   final String userId;
@@ -37,7 +36,9 @@ class SubjectDetailNisit extends StatefulWidget {
 class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
   late final String currentUserUid;
   late final String subjectDocId;
-
+  late final String ethereumAddress;
+  // late double rewardAmount; // define as state variable
+  // late double balanceAmount; // define as state variabl
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late User? currentUser;
   LocationData? _locationData;
@@ -54,6 +55,10 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
     subjectDocId = widget.docId;
     getCurrentUser();
     _getLocation();
+    // rewardAmount = 0.0; // initial value
+    // balanceAmount = 0.0;
+    // getEthereumAddress();
+    // getBalance(); // initial value
 
     // Call this method to get the current location.
   }
@@ -93,11 +98,22 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
     return distance <= (allowedDistance / 1000.0); // allowedDistance in m
   }
 
+  // Future<void> getEthereumAddress() async {
+  //   final userDoc = await FirebaseFirestore.instance
+  //       .collection('users')
+  //       .doc(currentUserUid)
+  //       .get();
+  //   setState(() {
+  //     ethereumAddress = userDoc['ethereumAddress'] ??
+  //         ""; // ควรจะมีการใส่ค่าให้ ethereumAddress ที่นี่
+  //   });
+  // }
+
   Future<void> checkIn(String status) async {
     try {
       if (!isWithinUniversity(_locationData)) {
         print('User is not within the allowed check-in area.');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('You are not within the allowed check-in area.'),
         ));
         print(
@@ -131,7 +147,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       if (studentsChecked != null) {
         for (var student in studentsChecked) {
           if (student['uid'] == currentUserUid) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('คุณได้เช็คอินแล้ว!'),
             ));
             return;
@@ -145,7 +161,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       final DateTime endDate = scheduleData['endDate'].toDate();
 
       if (now.isBefore(startDate) || now.isAfter(endDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Not within check-in time range.'),
         ));
         return;
@@ -157,25 +173,6 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       final email = userDoc.get('email') ?? "";
       final studentId = userDoc.get('studentId') ?? "";
 
-      // print(dateBigInt); // แสดงค่าของ dateBigInt
-      // print(rewardAmount * 1e18); // แสดงค่าของ rewardAmount ที่ถูกแปลงเป็น Wei
-      // print(response);
-      // print(status);
-      // print(credentials);
-      // print(client);
-      // print(contractAbi);
-      // print(contractAddress);
-      // print(credentials);
-      // final balance = await client
-      //     .call(contract: contract, function: getBalanceFunction, params: []);
-      // if (balance is List && balance.isNotEmpty && balance[0] is BigInt) {
-      //   final balanceInt = balance[0] as BigInt;
-      //   print('Balance: $balanceInt');
-      // } else {
-      //   print(
-      //       'Error: Unable to fetch balance or balance is not of type BigInt');
-      // }
-
       final newCheckIn = {
         'time': DateTime.now(),
         'uid': currentUserUid,
@@ -183,7 +180,8 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         'email': email,
         'studentId': studentId,
         'status': status,
-
+        // 'rewardAmount': rewardAmount,
+        // 'balanceAmount': balanceAmount,
         // 'rewardAmount': rewardAmount,
         // 'balanceInt': balanceInt,
       };
@@ -209,25 +207,50 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
           //... ข้อมูลที่คุณต้องการจะเก็บไว้
         });
       }
-      // อัพเดต field ที่ต้องการใน document ที่ตรงกับวันที่
-      await studentAttendanceScheduleRef.update({
-        'studentsCheckedRecords': FieldValue.arrayUnion([newCheckIn])
-      });
-      print('Updated Firestore with new check-in data.');
-
-      //   SnackBar(
-      //     content: Text(balanceInt != null
-      //         ? 'Your new balance is ${balanceInt! / BigInt.from(1e18)} tokens.'
-      //         : 'However, we could not retrieve your new balance.'),
-      //   ),
+      // // อัพเดต field ที่ต้องการใน document ที่ตรงกับวันที่
+      // await studentAttendanceScheduleRef.update({
+      //   'studentsCheckedRecords': FieldValue.arrayUnion([newCheckIn])
+      // });
+      // final url = 'http://10.0.2.2:3000/checkAttendanceAndReward';
+      // final response = await http.post(
+      //   Uri.parse(url),
+      //   body: jsonEncode({
+      //     'sender': ethereumAddress,
+      //     'date': DateTime.now().millisecondsSinceEpoch.toString(),
+      //   }),
+      //   headers: {
+      //     'Content-Type': 'application/json'
+      //   }, // ระบุ header ให้เป็น json
       // );
+
+      // if (response.statusCode == 200) {
+      //   final Map<String, dynamic> responseData = jsonDecode(response.body);
+      //   rewardAmount = responseData['rewardAmount'];
+      //   setState(() {}); // notify framework to rebuild widget
+      // } else {
+      //   print('Error: ${response.body}');
+      //   print(ethereumAddress);
+      // }
+
+      print('Updated Firestore with new check-in data.');
     } catch (e) {
       print('Error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Check-in Failed!'),
       ));
     }
   }
+
+  // Future<void> getBalance() async {
+  //   final url = 'http://10.0.2.2:3000/getBalance/$currentUserUid';
+  //   final response = await http.get(Uri.parse(url));
+  //   if (response.statusCode == 200) {
+  //     final Map<String, dynamic> responseData = jsonDecode(response.body);
+  //     balanceAmount =
+  //         responseData['balanceAmount']; // update the state variable
+  //     setState(() {}); // notify framework to rebuild widget
+  //   }
+  // }
 
   AppBar _buildAppBar() {
     return AppBar(
@@ -235,11 +258,11 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min, // กำหนดขนาดขั้นต่ำของ Column
         children: [
-          Text(widget.subjectName, style: TextStyle(fontSize: 18)),
-          SizedBox(height: 4),
+          Text(widget.subjectName, style: const TextStyle(fontSize: 18)),
+          const SizedBox(height: 4),
           Text(
             'Code: ${widget.subjectCode}, Group: ${widget.subjectGroup}',
-            style: TextStyle(fontSize: 14),
+            style: const TextStyle(fontSize: 14),
           ),
         ],
       ),
@@ -255,7 +278,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(
+            const SizedBox(
               height: 30,
             ),
             Padding(
@@ -272,25 +295,27 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                         borderRadius: BorderRadius.circular(10.0),
                       )),
                       padding: MaterialStateProperty.all(
-                        EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                        const EdgeInsets.symmetric(
+                            horizontal: 20.0, vertical: 12.0),
                       ),
                     ),
-                    child: Text('มาเรียน',
+                    child: const Text('มาเรียน',
                         style: TextStyle(color: Colors.white, fontSize: 18)),
                   ),
                   ElevatedButton(
                     onPressed: () => checkIn('leave'),
                     style: ButtonStyle(
                       backgroundColor: MaterialStateProperty.all(
-                          Color.fromARGB(255, 40, 29, 139)),
+                          const Color.fromARGB(255, 40, 29, 139)),
                       shape: MaterialStateProperty.all(RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
                       )),
                       padding: MaterialStateProperty.all(
-                        EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                        const EdgeInsets.symmetric(
+                            horizontal: 20.0, vertical: 12.0),
                       ),
                     ),
-                    child: Text('ลา',
+                    child: const Text('ลา',
                         style: TextStyle(color: Colors.white, fontSize: 18)),
                   ),
                 ],
@@ -315,13 +340,13 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                           color: Colors.grey.withOpacity(0.5), // สีเงา
                           spreadRadius: 1,
                           blurRadius: 5,
-                          offset: Offset(0, 2), // ตำแหน่งของเงา
+                          offset: const Offset(0, 2), // ตำแหน่งของเงา
                         ),
                       ],
                     ),
                     child: Text(
                       'Latitude: ${_locationData!.latitude}, Longitude: ${_locationData!.longitude}',
-                      style: TextStyle(fontSize: 16.0),
+                      style: const TextStyle(fontSize: 16.0),
                     ),
                   ),
                 ),
@@ -338,24 +363,24 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   print('StreamBuilder waiting for data...');
-                  return CircularProgressIndicator();
+                  return const CircularProgressIndicator();
                 }
 
                 if (!snapshot.hasData || !snapshot.data!.exists) {
-                  return Text('No data available.');
+                  return const Text('No data available.');
                 }
 
                 final data = snapshot.data!.data() as Map<String, dynamic>;
                 final List<dynamic>? studentsChecked = data['studentsChecked'];
 
                 if (studentsChecked == null || studentsChecked.isEmpty) {
-                  return Text('No check-ins yet.');
+                  return const Text('No check-ins yet.');
                 }
                 print('UI Updated.');
 
                 return ListView.builder(
                   shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: studentsChecked
                       .where((student) => student['uid'] == currentUserUid)
                       .length, // กรองตัวเลือกรายการที่ uid ตรงกัน
@@ -378,15 +403,15 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                           children: [
                             Text(
                               'ชื่อ ${checkIn['name']}',
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 16, fontWeight: FontWeight.bold),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
                               'ชื่อวิชา ${widget.subjectName} รหัสวิชา ${widget.subjectCode} หมู่เรียน ${widget.subjectGroup}',
-                              style: TextStyle(fontSize: 14),
+                              style: const TextStyle(fontSize: 14),
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -396,23 +421,37 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                                       fontSize: 14,
                                       color: checkIn['status'] == 'attended'
                                           ? Colors.green
-                                          : Color.fromARGB(255, 65, 59, 153)),
+                                          : const Color.fromARGB(
+                                              255, 65, 59, 153)),
                                 ),
                                 Text(
                                     'เวลา ${DateFormat('HH:mm').format(time)}'),
                               ],
                             ),
-
                             // Row(
                             //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             //   children: [
                             //     Text(
-                            //       'เหรียญที่ได้รับ: ${rewardAmount.toStringAsFixed(2)}',
+                            //       'เหรียญที่ได้รับ: ${rewardAmount ?? " not available"}',
                             //       style: TextStyle(
                             //           fontSize: 14, color: Colors.green),
                             //     ),
                             //     Text(
-                            //         'เหรียญที่มีอยู่: ${balanceInt != null ? (balanceInt! / BigInt.from(1e18)).toStringAsFixed(2) : 'Loading...'}'),
+                            //       'เหรียญที่มีอยู่: ${balanceAmount ?? 0.0}',
+                            //       style: TextStyle(fontSize: 14),
+                            //     ),
+                            //   ],
+                            // )
+                            // Row(
+                            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            //   children: [
+                            //     Text(
+                            //       'เหรียญที่ได้รับ: ',
+                            //       style: TextStyle(
+                            //           fontSize: 14, color: Colors.green),
+                            //     ),
+                            //     Text(
+                            //         'เหรียญที่มีอยู่: $: 'Loading...'}'),
                             //   ],
                             // )
                           ],

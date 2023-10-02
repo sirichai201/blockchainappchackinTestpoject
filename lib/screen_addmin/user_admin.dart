@@ -3,9 +3,8 @@ import 'package:blockchainappchackin/screen_addmin/caeate_Rewards.dart';
 import 'package:flutter/material.dart';
 
 import '../screen_login_user_all/login.dart';
-import '../screen_nisit/RedeemRewards.dart';
+
 import 'caeate_user.dart';
-import '../screen_addmin/user_admin.dart';
 
 class UserAdmin extends StatelessWidget {
   @override
@@ -46,8 +45,7 @@ class UserAdmin extends StatelessWidget {
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => CreateRewards()),
+                    MaterialPageRoute(builder: (context) => CreateRewards()),
                   );
                 },
                 child: Text('เพิ่มรายการของรางวัล'),
@@ -59,8 +57,7 @@ class UserAdmin extends StatelessWidget {
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => RewardsList()),
+                    MaterialPageRoute(builder: (context) => RewardsList()),
                   );
                 },
                 child: Text('รายการของรางวัล'),

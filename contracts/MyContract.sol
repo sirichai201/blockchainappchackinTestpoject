@@ -1,34 +1,45 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-contract AttendanceContract {
+contract MyContract {
+    // จัดเก็บข้อมูลการเช็คชื่อของนักศึกษา
     mapping(address => mapping(uint256 => bool)) public attendanceRecords;
+    // จัดเก็บยอดเงินของนักศึกษา
     mapping(address => uint256) public balances;
+    
+    // ประกาศ event เพื่อบันทึกเมื่อนักศึกษาเช็คชื่อและรับรางวัล
+    event CheckedIn(address indexed student, uint256 date, uint256 rewardAmount);
+    // ประกาศ event เพื่อบันทึกเมื่อนักศึกษาใช้เหรียญ
+    event SpentCoin(address indexed student, uint256 amount);
+    
+    function checkAttendanceAndReward(uint256 date) public {
+    
 
-    function checkAttendanceAndReward(uint256 date, uint256 rewardAmount) public {
-        require(date >= block.timestamp, "Invalid date");
-        require(!attendanceRecords[msg.sender][date], "Attendance already recorded");
+    // เพิ่ม balance ของผู้ที่เช็คชื่อ
+    balances[msg.sender] += 0.02 ether;
+    attendanceRecords[msg.sender][date] = true;
         
-        attendanceRecords[msg.sender][date] = true;
-        balances[msg.sender] += rewardAmount;
-         emit CheckedIn(msg.sender, date, rewardAmount);
-    }
+    // ทำการ emit event สำหรับการเช็คชื่อ
+    emit CheckedIn(msg.sender, date, 0.02 ether);
+}
 
-    function isAttended(address student, uint256 date) public view returns (bool) {
-        return attendanceRecords[student][date];
-    }
-
+    
+    
+    
     function getBalance() public view returns (uint256) {
+        // ดึงยอดเงินปัจจุบันของนักศึกษา
         return balances[msg.sender];
     }
-
+    
     function spendCoin(uint256 amount) public {
-    require(balances[msg.sender] >= amount, "Insufficient balance");
-    balances[msg.sender] -= amount;
-    emit SpentCoin(msg.sender, amount);
+        // ตรวจสอบว่านักศึกษามียอดเงินเพียงพอที่จะใช้จ่าย
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        
+        // หักยอดเงินของนักศึกษาที่ใช้จ่าย
+        balances[msg.sender] -= amount;
+        
+        // ทำการ emit event สำหรับการใช้เหรียญ
+        emit SpentCoin(msg.sender, amount);
+    }
 }
 
-event CheckedIn(address indexed student, uint256 date, uint256 rewardAmount);
-event SpentCoin(address indexed student, uint256 amount);
-
-
-}

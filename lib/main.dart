@@ -7,6 +7,7 @@ void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); // ต้องมีการเรียกใช้ method นี้ก่อนเรียกใช้ await
   await Firebase.initializeApp();
+
   runApp(const MyApp());
 }
 
