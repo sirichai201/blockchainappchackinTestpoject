@@ -10,6 +10,8 @@ import 'dart:convert'; // ให้เพิ่ม import นี้ที่ส�
 import 'package:http/http.dart'; // ควรมีการ import นี้ด้วย เพราะ web3dart ใช้งาน http package
 import 'package:web3dart/web3dart.dart' as web3;
 
+import 'history_nisit.dart';
+
 class SubjectDetailNisit extends StatefulWidget {
   final String userId;
   final String docId;
@@ -33,10 +35,9 @@ class SubjectDetailNisit extends StatefulWidget {
 }
 
 class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
-  // double rewardAmount = 0.2;
-  // BigInt? balanceInt;
   late final String currentUserUid;
   late final String subjectDocId;
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late User? currentUser;
   LocationData? _locationData;
@@ -106,7 +107,8 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
         return;
       }
-      // ที่อยู่ของ Document ใน Firestore
+
+      // ที่อยู่ของ Document ใน Firestore ของอาจารย์
       final attendanceScheduleRef = _firestore
           .collection('users')
           .doc(widget.uidTeacher)
@@ -155,158 +157,6 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       final email = userDoc.get('email') ?? "";
       final studentId = userDoc.get('studentId') ?? "";
 
-      // final client = web3.Web3Client('http://10.0.2.2:8545', Client());
-
-      // final contractAbiList = [
-      //   {
-      //     "anonymous": false,
-      //     "inputs": [
-      //       {
-      //         "indexed": true,
-      //         "internalType": "address",
-      //         "name": "student",
-      //         "type": "address"
-      //       },
-      //       {
-      //         "indexed": false,
-      //         "internalType": "uint256",
-      //         "name": "date",
-      //         "type": "uint256"
-      //       },
-      //       {
-      //         "indexed": false,
-      //         "internalType": "uint256",
-      //         "name": "rewardAmount",
-      //         "type": "uint256"
-      //       }
-      //     ],
-      //     "name": "CheckedIn",
-      //     "type": "event"
-      //   },
-      //   {
-      //     "anonymous": false,
-      //     "inputs": [
-      //       {
-      //         "indexed": true,
-      //         "internalType": "address",
-      //         "name": "student",
-      //         "type": "address"
-      //       },
-      //       {
-      //         "indexed": false,
-      //         "internalType": "uint256",
-      //         "name": "amount",
-      //         "type": "uint256"
-      //       }
-      //     ],
-      //     "name": "SpentCoin",
-      //     "type": "event"
-      //   },
-      //   {
-      //     "inputs": [
-      //       {"internalType": "address", "name": "", "type": "address"},
-      //       {"internalType": "uint256", "name": "", "type": "uint256"}
-      //     ],
-      //     "name": "attendanceRecords",
-      //     "outputs": [
-      //       {"internalType": "bool", "name": "", "type": "bool"}
-      //     ],
-      //     "stateMutability": "view",
-      //     "type": "function"
-      //   },
-      //   {
-      //     "inputs": [
-      //       {"internalType": "address", "name": "", "type": "address"}
-      //     ],
-      //     "name": "balances",
-      //     "outputs": [
-      //       {"internalType": "uint256", "name": "", "type": "uint256"}
-      //     ],
-      //     "stateMutability": "view",
-      //     "type": "function"
-      //   },
-      //   {
-      //     "inputs": [
-      //       {"internalType": "uint256", "name": "date", "type": "uint256"},
-      //       {
-      //         "internalType": "uint256",
-      //         "name": "rewardAmount",
-      //         "type": "uint256"
-      //       }
-      //     ],
-      //     "name": "checkAttendanceAndReward",
-      //     "outputs": [],
-      //     "stateMutability": "nonpayable",
-      //     "type": "function"
-      //   },
-      //   {
-      //     "inputs": [
-      //       {"internalType": "address", "name": "student", "type": "address"},
-      //       {"internalType": "uint256", "name": "date", "type": "uint256"}
-      //     ],
-      //     "name": "isAttended",
-      //     "outputs": [
-      //       {"internalType": "bool", "name": "", "type": "bool"}
-      //     ],
-      //     "stateMutability": "view",
-      //     "type": "function"
-      //   },
-      //   {
-      //     "inputs": [],
-      //     "name": "getBalance",
-      //     "outputs": [
-      //       {"internalType": "uint256", "name": "", "type": "uint256"}
-      //     ],
-      //     "stateMutability": "view",
-      //     "type": "function"
-      //   },
-      //   {
-      //     "inputs": [
-      //       {"internalType": "uint256", "name": "amount", "type": "uint256"}
-      //     ],
-      //     "name": "spendCoin",
-      //     "outputs": [],
-      //     "stateMutability": "nonpayable",
-      //     "type": "function"
-      //   }
-      // ];
-      // final contractAddress = web3.EthereumAddress.fromHex(
-      //     '0x2eFD35Fc72B4d90E135e6b3E0428f911e73C12E1');
-
-      // final credentials = await client.credentialsFromPrivateKey(
-      //     '7868d1e4d98b02b48d352e615b8c4abcb49d8cacc37c1f57ed263e69825a671f');
-      // final contractAbi = web3.ContractAbi.fromJson(
-      //     jsonEncode(contractAbiList), 'AttendanceContract');
-      // final contract = web3.DeployedContract(contractAbi, contractAddress);
-
-      // final dateBigInt = BigInt.from(DateTime.now().millisecondsSinceEpoch);
-
-      // final rewardAmount = 0.02; // จำนวนเหรียญที่คุณต้องการให้นักเรียนได้รับ
-      // final checkRewardFunction = contract.function('checkAttendanceAndReward');
-      // print(checkRewardFunction);
-      // final getBalanceFunction = contract.function('getBalance');
-      // print(getBalanceFunction);
-      // // ignore: unused_local_variable
-      // final response = await client.sendTransaction(
-      //   credentials,
-      //   web3.Transaction.callContract(
-      //     contract: contract,
-      //     function: checkRewardFunction,
-      //     parameters: [
-      //       dateBigInt,
-      //       BigInt.from((rewardAmount * 1e18)
-      //           .toInt()) // ใช้ BigInt ที่แปลงจาก 0.2 Ether ไปเป็น Wei แล้ว
-      //     ],
-      //   ),
-      // );
-      // final parameters = [
-      //   dateBigInt,
-      //   BigInt.from((rewardAmount * 1e18)
-      //       .toInt()) // ใช้ BigInt ที่แปลงจาก 0.2 Ether ไปเป็น Wei แล้ว
-      // ];
-      // print(parameters);
-
-      // print(contract);
       // print(dateBigInt); // แสดงค่าของ dateBigInt
       // print(rewardAmount * 1e18); // แสดงค่าของ rewardAmount ที่ถูกแปลงเป็น Wei
       // print(response);
@@ -341,9 +191,30 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       await attendanceScheduleRef.update({
         'studentsChecked': FieldValue.arrayUnion([newCheckIn])
       });
+      // ไปที่ document ของวิชาที่นิสิตเข้าร่วมใน firestore
+      final studentSubjectRef = _firestore
+          .collection('users')
+          .doc(currentUserUid)
+          .collection('enrolledSubjects')
+          .doc(subjectDocId);
+
+      // สร้างหรือไปที่ collection attendanceSchedulesRecords ที่อยู่ใน enrolledSubjects Doc.id
+      final studentAttendanceScheduleRef = studentSubjectRef
+          .collection('attendanceSchedulesRecords')
+          .doc(DateTime.now().toLocal().toString().split(' ')[0]);
+
+      // ทำการเช็คว่ามี document นี้หรือยัง ถ้ายังก็สร้าง
+      if (!(await studentAttendanceScheduleRef.get()).exists) {
+        await studentAttendanceScheduleRef.set({
+          //... ข้อมูลที่คุณต้องการจะเก็บไว้
+        });
+      }
+      // อัพเดต field ที่ต้องการใน document ที่ตรงกับวันที่
+      await studentAttendanceScheduleRef.update({
+        'studentsCheckedRecords': FieldValue.arrayUnion([newCheckIn])
+      });
       print('Updated Firestore with new check-in data.');
 
-      // ScaffoldMessenger.of(context).showSnackBar(
       //   SnackBar(
       //     content: Text(balanceInt != null
       //         ? 'Your new balance is ${balanceInt! / BigInt.from(1e18)} tokens.'
@@ -531,6 +402,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                                     'เวลา ${DateFormat('HH:mm').format(time)}'),
                               ],
                             ),
+
                             // Row(
                             //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             //   children: [

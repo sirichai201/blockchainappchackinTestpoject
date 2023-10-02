@@ -59,6 +59,9 @@ class _HistoryState extends State<History> {
     final docSnapshot = await attendanceDocRef.get();
     if (!docSnapshot.exists) {
       print('No attendance data found for $formattedSelectedDate');
+      setState(() {
+        attendanceList = [];
+      });
       return;
     }
     final data = docSnapshot.data() as Map<String, dynamic>;
@@ -216,45 +219,50 @@ class _HistoryState extends State<History> {
               Text(
                   'นิสิตลา: ${attendanceList.where((item) => item['status'] == 'leave').length} คน'),
               const SizedBox(height: 20),
-              // Attendance List
-              ...attendanceList.map((attendance) {
-                print(
-                    'Building Card for ${attendance['studentId'] ?? 'unknown student'}'); // เพิ่ม print ที่นี่ครับ
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                                'ชื่อ: ${attendance['name'] ?? 'ไม่มีข้อมูล'}'),
-                            Text(
-                                'รหัสนิสิต: ${attendance['studentId'] ?? 'ไม่มีข้อมูล'}'),
-                          ],
-                        ),
-                        const SizedBox(height: 8.0),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                                'สถานะ: ${attendance['status'] ?? 'ไม่มีข้อมูล'}'),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 8.0,
-                          width: 20,
-                        ),
-                        Text(
-                            'เวลา: ${_formatTimestamp(attendance['time'] as Timestamp)}'),
-                      ],
+              ...[
+                if (attendanceList.isEmpty)
+                  Center(
+                      child: Text(
+                          'ไม่มีข้อมูลนิสิตในวันที่ ${selectedDate.toLocal().toString().split(' ')[0]}')),
+                ...attendanceList.map((attendance) {
+                  print(
+                      'Building Card for ${attendance['studentId'] ?? 'unknown student'}');
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                  'ชื่อ: ${attendance['name'] ?? 'ไม่มีข้อมูล'}'),
+                              Text(
+                                  'รหัสนิสิต: ${attendance['studentId'] ?? 'ไม่มีข้อมูล'}'),
+                            ],
+                          ),
+                          const SizedBox(height: 8.0),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                  'สถานะ: ${attendance['status'] ?? 'ไม่มีข้อมูล'}'),
+                            ],
+                          ),
+                          const SizedBox(
+                            height: 8.0,
+                            width: 20,
+                          ),
+                          Text(
+                              'เวลา: ${_formatTimestamp(attendance['time'] as Timestamp)}'),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ],
             ],
           ),
         ),

@@ -70,19 +70,6 @@ class DrawerBarNisit extends StatelessWidget {
           const SizedBox(
             height: 20,
           ),
-          _buildDrawerItem(
-            title: 'ประวัติการเข้าเรียน',
-            icon: Icons.history,
-            onTap: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const HistoryNisit(),
-                ),
-              );
-              // Add your code here when clicking on 'ประวัติการเข้าเรียน'
-            },
-          ),
           const SizedBox(
             height: 20,
           ),
@@ -94,6 +81,21 @@ class DrawerBarNisit extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => Profile(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(
+            height: 20,
+          ),
+          _buildDrawerItem(
+            title: 'ประวัติการเข้าเรียน',
+            icon: Icons.manage_accounts,
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HistoryNisit(),
                 ),
               );
             },
