@@ -4,6 +4,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'RewardDetailPage.dart';
 
+class RedeemRewards extends StatefulWidget {
+  final String uid;
+
+  RedeemRewards({required this.uid});
+
+  @override
+  _RedeemRewardsState createState() => _RedeemRewardsState();
+}
+
 class _RedeemRewardsState extends State<RedeemRewards> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -35,7 +44,7 @@ class _RedeemRewardsState extends State<RedeemRewards> {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               final reward = snapshot.data!.docs[index];
-              final imageUrl = reward['imageUrl'] as String? ?? '';//adada
+              final imageUrl = reward['imageUrl'] as String? ?? '';
 
               return ListTile(
                 leading: imageUrl.isNotEmpty
@@ -62,3 +71,5 @@ class _RedeemRewardsState extends State<RedeemRewards> {
     );
   }
 }
+
+void main() => runApp(MaterialApp(home: RedeemRewards(uid: 'some-uid')));

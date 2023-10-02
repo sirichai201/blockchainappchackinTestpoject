@@ -1,98 +1,37 @@
-import 'package:blockchainappchackin/screen_nisit/User_nisit.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// อย่าลืม import หน้า UserNisit และทำการ import ทุกสิ่งที่จำเป็น
-
-class RedeemRewards extends StatefulWidget {
-  final String uid;
-
-  RedeemRewards({required this.uid});
-
-  @override
-  _RedeemRewardsState createState() => _RedeemRewardsState();
-}
-
-class _RedeemRewardsState extends State<RedeemRewards> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  Future<void> redeemReward(DocumentSnapshot reward) async {
-    try {
-      await _firestore.runTransaction((transaction) async {
-        final data = reward.data() as Map<String, dynamic>;
-        final quantity = data['quantity'] as int;
-
-        if (quantity <= 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ของรางวัลหมดแล้ว')),
-          );
-          return;
-        }
-
-        transaction.update(reward.reference, {'quantity': quantity - 1});
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('การแลกของรางวัลสำเร็จ')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('การแลกของรางวัลล้มเหลว: $e')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Redeem Rewards'),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => UserNisit())); // ย้อนกลับไปหน้าก่อนหน้านี้
-          },
-        ),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection('rewards').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('ไม่มีรางวัลที่สามารถแลกได้ในขณะนี้'));
-          }
-
-          return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              final reward = snapshot.data!.docs[index];
-
-              return ListTile(
-                title: Text(reward['name'] ?? 'Unknown'),
-                subtitle: Text('Cost: ${reward['cost'] ?? 'Unknown'} coins'),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => RewardDetailPage(reward: reward),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
 
 class RewardDetailPage extends StatelessWidget {
   final DocumentSnapshot reward;
 
   RewardDetailPage({required this.reward});
+
+  Future<void> _decrementRewardQuantity(BuildContext context) async {
+    try {
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final rewardDoc = FirebaseFirestore.instance.collection('rewards').doc(reward.id);
+        final rewardData = (await transaction.get(rewardDoc)).data() as Map<String, dynamic>;
+        int currentQuantity = rewardData['quantity'] ?? 0;
+
+        if (currentQuantity > 0) {
+          transaction.update(rewardDoc, {'quantity': currentQuantity - 1});
+          
+          // แสดง SnackBar เมื่อการแลกสำเร็จ
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('ทำการแลกเรียบร้อย')),
+          );
+          // ย้อนกลับไปที่หน้า Redeem Rewards
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('ของรางวัลหมดแล้ว')),
+          );
+        }
+      });
+    } catch (e) {
+      print('เกิดข้อผิดพลาดในการลดจำนวนของรางวัล: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +39,7 @@ class RewardDetailPage extends StatelessWidget {
     final name = data['name'] as String? ?? 'Unknown';
     final imageUrl = data['imageUrl'] as String? ?? '';
     final cost = data['cost'] as int? ?? 0;
-    final description = data['description'] as String? ?? 'No description available';
+    final remainingQuantity = data['quantity'] as int? ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -115,7 +54,35 @@ class RewardDetailPage extends StatelessWidget {
               Image.network(imageUrl),
             Text('Name: $name'),
             Text('Cost: $cost coins'),
-            Text('Description: $description'),
+            Text('Remaining Quantity: $remainingQuantity'),
+            ElevatedButton(
+              onPressed: remainingQuantity > 0 ? () async {
+                bool? confirm = await showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('ยืนยันการแลกของ'),
+                      content: Text('คุณต้องการแลกของรางวัลนี้หรือไม่?'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false), // ยกเลิก
+                          child: Text('ยกเลิก'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true), // ยืนยัน
+                          child: Text('ยืนยัน'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+                if (confirm == true) {
+                  await _decrementRewardQuantity(context);
+                }
+              } : null, // ปุ่มจะถูกปิดใช้งานถ้า remainingQuantity <= 0
+              child: Text('ยืนยันการแลกของรางวัล'),
+            ),
           ],
         ),
       ),
