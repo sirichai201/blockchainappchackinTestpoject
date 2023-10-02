@@ -1,8 +1,11 @@
+import 'package:blockchainappchackin/screen_addmin/RewardList.dart';
+import 'package:blockchainappchackin/screen_addmin/caeate_Rewards.dart';
 import 'package:flutter/material.dart';
 
 import '../screen_login_user_all/login.dart';
 import '../screen_nisit/RedeemRewards.dart';
 import 'caeate_user.dart';
+import '../screen_addmin/user_admin.dart';
 
 class UserAdmin extends StatelessWidget {
   @override
@@ -44,12 +47,23 @@ class UserAdmin extends StatelessWidget {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => RedeemRewards(
-                              uid: '',
-                            )),
+                        builder: (context) => CreateRewards()),
                   );
                 },
-                child: Text('จัดการของราวัล'),
+                child: Text('เพิ่มรายการของรางวัล'),
+              ),
+              SizedBox(
+                height: 20,
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => RewardsList()),
+                  );
+                },
+                child: Text('รายการของรางวัล'),
               ),
               // คุณสามารถเพิ่มปุ่มหรือวิดเจ็ตอื่นๆ ที่ต้องการได้ที่นี่
             ],
