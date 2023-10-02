@@ -198,7 +198,9 @@ class _SubjectDetailState extends State<SubjectDetail> {
         'name': subject['name'],
         'code': subject['code'],
         'group': subject['group'],
-        'uidTeacher': widget.userId
+        'uidTeacher': widget.userId,
+        'year': subject['year'], // ค่าของ 'year' จาก object subject
+        'term': subject['term'], // ค่าของ 'term' จาก object subject
       });
     }
 
