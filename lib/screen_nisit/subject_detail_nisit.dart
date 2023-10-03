@@ -35,7 +35,7 @@ class SubjectDetailNisit extends StatefulWidget {
 
 class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
   double? rewardAmount;
-  double? balanceAmount;
+  double? balanceInEther;
 
   late final String currentUserUid;
   late final String subjectDocId;
@@ -63,8 +63,9 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
   }
 
   Future<void> _printUserEthereumAddress() async {
+    // ignore: unnecessary_null_comparison
     if (currentUserUid != null) {
-      String? ethAddress = await fetchUserEthereumAddress(currentUserUid!);
+      String? ethAddress = await fetchUserEthereumAddress(currentUserUid);
       if (ethAddress != null) {
         print('Ethereum Address for user $currentUserUid is $ethAddress');
       } else {
@@ -196,7 +197,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         'studentId': studentId,
         'status': status,
         'rewardAmount': rewardAmount,
-        'balanceAmount': balanceAmount,
+        'balanceInEther': balanceInEther,
       };
 
       print('Receiver Address before sending Ether: $receiverAddress');
@@ -213,7 +214,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       await attendanceScheduleRef.update({
         'studentsChecked': FieldValue.arrayUnion([newCheckIn])
       });
-      print('Current balance: $balanceAmount');
+      print('Current balance: $balanceInEther');
 
       // ไปที่ document ของวิชาที่นิสิตเข้าร่วมใน firestore
       final studentSubjectRef = _firestore
@@ -289,18 +290,23 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
     final url = 'http://10.0.2.2:3000/getBalance/$ethAddress';
     final response = await http.get(Uri.parse(url));
+    print(response.body);
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
+
       if (responseData.containsKey('balanceInEther')) {
         try {
-          balanceAmount =
-              double.parse(responseData['balanceInEther'].toString());
-          setState(() {}); // notify framework to rebuild widget
+          setState(() {
+            balanceInEther =
+                double.parse(responseData['balanceInEther'].toString());
+          });
+          print('Balance in Ether: $balanceInEther');
+          // ทำสิ่งที่คุณต้องการด้วย balanceInEther
         } catch (e) {
           print('Error parsing balanceInEther: $e');
         }
       } else {
-        print('Error: Unexpected response body');
+        print('Error with the response: ${response.body}');
       }
     }
   }
@@ -501,7 +507,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                                       fontSize: 14, color: Colors.green),
                                 ),
                                 Text(
-                                  'เหรียญที่มีอยู่: ${balanceAmount ?? 0.0}',
+                                  'เหรียญที่มีอยู่: ${balanceInEther ?? " not available"}',
                                   style: TextStyle(fontSize: 14),
                                 ),
                               ],

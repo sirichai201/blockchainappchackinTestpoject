@@ -34,6 +34,25 @@ const contractABI = [
         "type": "uint256"
       }
     ],
+    "name": "Rewarded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "student",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
     "name": "SpentCoin",
     "type": "event"
   },
@@ -116,7 +135,7 @@ const contractABI = [
     "type": "function"
   }
 ];
-const contractAddress = '0xe96987a1FA152E618557c9042a747AFC323CefCC';
+const contractAddress = '0xeA7e6E6149Ab87150FC8e89967df0c217EF36d99';
 
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
@@ -135,31 +154,34 @@ app.use((req, res, next) => {
   next();
 });
 
-
-
-
-
-
+// สร้าง endpoint '/sendEther' ด้วย HTTP POST method สำหรับการส่ง Ether
 app.post('/sendEther', async (req, res) => {
   try {
     const { receiverAddress } = req.body;
+
+    // ตรวจสอบว่า receiverAddress ที่ได้รับมาเป็น Ethereum address ที่ถูกต้องหรือไม่
     if (!web3.utils.isAddress(receiverAddress)) {
       return res.status(400).send('ที่อยู่ Ethereum ไม่ถูกต้อง');
     }
     console.log(`เริ่มต้นการส่ง Ether ไปยัง ${receiverAddress}...`);
-    const senderAddress = '0xe96987a1FA152E618557c9042a747AFC323CefCC';
+
+    const senderAddress = '0xeA7e6E6149Ab87150FC8e89967df0c217EF36d99';
     const privateKey = process.env.PRIVATE_KEY;
     const amountInEther = '0.05';
-
     const amountInWei = web3.utils.toWei(amountInEther, 'ether');
 
-    const rewardTx = await contract.methods.rewardStudent(receiverAddress)
-    .send({
+    const rawTransaction = {
       from: senderAddress,
-      gas: 300000,
+      to: receiverAddress, // ใช้ receiverAddress ที่ได้รับมา
+      gas: await contract.methods.rewardStudent(receiverAddress).estimateGas({from: senderAddress}),
+      data: contract.methods.rewardStudent(receiverAddress).encodeABI(),
       value: amountInWei
-    });
-  
+    };
+
+    const signedTransaction = await web3.eth.accounts.signTransaction(rawTransaction, privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedTransaction.rawTransaction);
+    console.log('Transaction Receipt:', receipt);
+
     res.json({ rewardAmount: amountInEther });
     console.log(`ส่ง Ether ไปยัง ${receiverAddress} สำเร็จ.`);
   } catch (error) {
@@ -168,13 +190,7 @@ app.post('/sendEther', async (req, res) => {
   }
 });
 
-process.on('uncaughtException', (error) => {
-    console.error('ข้อผิดพลาดที่ไม่ได้ถูกจับ:', error);
-});
 
-process.on('unhandledRejection', (reason, p) => {
-  console.error('ปฏิเสธการสัญญาที่ไม่ได้ถูกจัดการ:', p, 'เหตุผล:', reason);
-});
 
 
 app.post('/createEthereumAddress', async (req, res) => {
