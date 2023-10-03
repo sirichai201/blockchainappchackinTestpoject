@@ -1,216 +1,230 @@
 const express = require('express');
+const admin = require('firebase-admin');
 const Web3 = require('web3');
-
 const cors = require('cors');
-
 const app = express();
+const bodyParser = require('body-parser');
+require('dotenv').config();
+app.use(bodyParser.json()); 
 app.use(cors());
 app.use(express.json());
+const web3 = new Web3('http://127.0.0.1:7545');
 
-const web3 = new Web3('http://192.168.1.3:7545');
- // หรือ endpoint ที่ถูกต้องของคุณ
 
-const contractABI =   [
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "student",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "date",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "rewardAmount",
-          "type": "uint256"
-        }
-      ],
-      "name": "CheckedIn",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "student",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "SpentCoin",
-      "type": "event"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "attendanceRecords",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "balances",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "date",
-          "type": "uint256"
-        }
-      ],
-      "name": "checkAttendanceAndReward",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getBalance",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "spendCoin",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ];
-const contractAddress = '0x17693a1A5Bc8623801BAA6Dd2a040821482BaB5B'; // หรือ address ที่ถูกต้องของคุณ
+
+const contractABI = [
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "student",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "SpentCoin",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "balances",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "deposit",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "spendCoin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "student",
+        "type": "address"
+      }
+    ],
+    "name": "rewardStudent",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+];
+const contractAddress = '0xe96987a1FA152E618557c9042a747AFC323CefCC';
 
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
+const serviceAccount = require('./projectblockchainapp-9defb-firebase-adminsdk-2doub-bab55a8ad3.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+
+
+
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
 
 
 
 
 
 
-
-
-app.post('/checkAttendanceAndReward', async (req, res) => {
-    try {
-      const { sender, date } = req.body;
-      const response = await contract.methods.checkAttendanceAndReward(date).send({ from: sender });
-      res.send(response);
-    } catch (error) {
-      console.error('Error:', error);
-      res.status(500).send(error.toString());
+app.post('/sendEther', async (req, res) => {
+  try {
+    const { receiverAddress } = req.body;
+    if (!web3.utils.isAddress(receiverAddress)) {
+      return res.status(400).send('ที่อยู่ Ethereum ไม่ถูกต้อง');
     }
-  });
+    console.log(`เริ่มต้นการส่ง Ether ไปยัง ${receiverAddress}...`);
+    const senderAddress = '0xe96987a1FA152E618557c9042a747AFC323CefCC';
+    const privateKey = process.env.PRIVATE_KEY;
+    const amountInEther = '0.05';
+
+    const amountInWei = web3.utils.toWei(amountInEther, 'ether');
+
+    const rewardTx = await contract.methods.rewardStudent(receiverAddress)
+    .send({
+      from: senderAddress,
+      gas: 300000,
+      value: amountInWei
+    });
   
-
-
-app.get('/getBalance/:address', async (req, res) => {
-    try {
-        const address = req.params.address;
-        const balance = await contract.methods.getBalance().call({ from: address });
-        res.send({ balance });
-    } catch (error) {
-        console.error('เกิดข้อผิดพลาด:', error);
-        res.status(500).send(error.toString());
-    }
-});
-app.post('/sendSignedTransaction', async (req, res) => {
-    try {
-        const { rawTransaction } = req.body; // rawTransaction ที่ได้มาจาก Flutter
-        const receipt = await web3.eth.sendSignedTransaction(rawTransaction);
-        res.send(receipt);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).send(error.toString());
-    }
+    res.json({ rewardAmount: amountInEther });
+    console.log(`ส่ง Ether ไปยัง ${receiverAddress} สำเร็จ.`);
+  } catch (error) {
+    console.error('ผิดพลาด:', error);
+    res.status(500).send(error.toString());
+  }
 });
 
+process.on('uncaughtException', (error) => {
+    console.error('ข้อผิดพลาดที่ไม่ได้ถูกจับ:', error);
+});
 
-
-
-
-
-
+process.on('unhandledRejection', (reason, p) => {
+  console.error('ปฏิเสธการสัญญาที่ไม่ได้ถูกจัดการ:', p, 'เหตุผล:', reason);
+});
 
 
 app.post('/createEthereumAddress', async (req, res) => {
-    try {
-      const { userId } = req.body; // รับ userId ที่ส่งมาจาก Client
-      const account = web3.eth.accounts.create(); // สร้าง Ethereum Address ใหม่
-      
-      // ใช้ Firestore instance ที่ได้จาก Firebase Admin SDK
+  let userId; 
+
+  try {
+      if (!req.body || !req.body.userId) {
+          return res.status(400).send('ต้องการ userId');
+      }
+
+      userId = req.body.userId;
+
+      const account = web3.eth.accounts.create();
+
       const userDocRef = db.collection('users').doc(userId);
       await userDocRef.set({
-        ethereumAddress: account.address, // ใช้ account.address ที่ได้จากการสร้าง Ethereum Address
+        ethereumAddress: account.address,
       }, { merge: true });
   
-      console.log('Ethereum Address:', account.address);
-      console.log('Private Key:', account.privateKey);
-      
-      res.json({ ethereumAddress: account.address });
+      res.json({
+        ethereumAddress: account.address,
+        ethereumPrivateKey: account.privateKey
+      });
     } catch (error) {
-      console.error('Error:', error);
-      res.status(500).send(error.toString());
+        console.error('ผิดพลาด:', error);
+        console.error('รับ userId:', userId); 
+        res.status(500).send(error.toString());
     }
-  });
+});
+
+app.get('/getBalance/:address', async (req, res) => {
+  try {
+      const address = req.params.address;
+      if (!web3.utils.isAddress(address)) {
+          return res.status(400).send('ที่อยู่ Ethereum ไม่ถูกต้อง');
+      }
+
+      const balanceInWei = await web3.eth.getBalance(address);
+      const balanceInEther = web3.utils.fromWei(balanceInWei, 'ether');
+
+      res.json({
+          address: address,
+          balanceAmount: balanceInWei,
+          balanceInEther: balanceInEther
+      });
+  } catch (error) {
+      console.error('ผิดพลาด:', error);
+      res.status(500).send(error.toString());
+  }
+});
+
 const PORT = 3000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+app.listen(PORT, () => console.log(`เซิร์ฟเวอร์กำลังทำงานที่พอร์ต ${PORT}`));

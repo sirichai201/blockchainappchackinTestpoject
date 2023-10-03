@@ -34,11 +34,12 @@ class SubjectDetailNisit extends StatefulWidget {
 }
 
 class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
+  double? rewardAmount;
+  double? balanceAmount;
+
   late final String currentUserUid;
   late final String subjectDocId;
-  late final String ethereumAddress;
-  // late double rewardAmount; // define as state variable
-  // late double balanceAmount; // define as state variabl
+// define as state variabl
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late User? currentUser;
   LocationData? _locationData;
@@ -55,20 +56,35 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
     subjectDocId = widget.docId;
     getCurrentUser();
     _getLocation();
-    // rewardAmount = 0.0; // initial value
-    // balanceAmount = 0.0;
-    // getEthereumAddress();
-    // getBalance(); // initial value
+    _printUserEthereumAddress();
+    print('Initializing state for SubjectDetailNisit...');
 
     // Call this method to get the current location.
   }
 
+  Future<void> _printUserEthereumAddress() async {
+    if (currentUserUid != null) {
+      String? ethAddress = await fetchUserEthereumAddress(currentUserUid!);
+      if (ethAddress != null) {
+        print('Ethereum Address for user $currentUserUid is $ethAddress');
+      } else {
+        print('Failed to fetch Ethereum Address for user UID: $currentUserUid');
+      }
+    } else {
+      print('currentUserUid is null. Cannot fetch Ethereum Address.');
+    }
+  }
+
   Future<void> getCurrentUser() async {
+    print('Fetching current user...');
+
     currentUser = FirebaseAuth.instance.currentUser;
   }
 
   // Method to get the current location of the user.
   Future<void> _getLocation() async {
+    print('Fetching user location...');
+
     final location = Location();
     final LocationData locationData = await location.getLocation();
     setState(() {
@@ -80,6 +96,8 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
   // Method to check if the user is within the allowed distance from the university.
   bool isWithinUniversity(LocationData? locationData) {
+    print('Checking if user is within university vicinity...');
+
     if (locationData == null) return false;
     const earthRadius = 6371.0; // in km
     double toRadian(double degree) => degree * (pi / 180.0);
@@ -98,32 +116,25 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
     return distance <= (allowedDistance / 1000.0); // allowedDistance in m
   }
 
-  // Future<void> getEthereumAddress() async {
-  //   final userDoc = await FirebaseFirestore.instance
-  //       .collection('users')
-  //       .doc(currentUserUid)
-  //       .get();
-  //   setState(() {
-  //     ethereumAddress = userDoc['ethereumAddress'] ??
-  //         ""; // ควรจะมีการใส่ค่าให้ ethereumAddress ที่นี่
-  //   });
-  // }
-
   Future<void> checkIn(String status) async {
+    print('Attempting to check in for user with UID: $currentUserUid...');
+
     try {
       if (!isWithinUniversity(_locationData)) {
         print('User is not within the allowed check-in area.');
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('You are not within the allowed check-in area.'),
         ));
-        print(
-            'LocationData: ${_locationData?.latitude}, ${_locationData?.longitude}');
+
         print('User is not within the allowed check-in area.');
         print('User has already checked in.');
+        print(
+            'LocationData: ${_locationData?.latitude}, ${_locationData?.longitude}');
 
         return;
       }
-
+      print(
+          'LocationData: ${_locationData?.latitude}, ${_locationData?.longitude}');
       // ที่อยู่ของ Document ใน Firestore ของอาจารย์
       final attendanceScheduleRef = _firestore
           .collection('users')
@@ -141,6 +152,7 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
       final Map<String, dynamic> scheduleData =
           scheduleDoc.data() as Map<String, dynamic>;
+      print('Attendance Schedule Data: $scheduleData');
 
       // ตรวจสอบว่าผู้ใช้ได้เช็คอินแล้วหรือยัง
       final List<dynamic>? studentsChecked = scheduleData['studentsChecked'];
@@ -172,6 +184,9 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       final username = userDoc.get('Username') ?? "";
       final email = userDoc.get('email') ?? "";
       final studentId = userDoc.get('studentId') ?? "";
+      final receiverAddress = userDoc.get('ethereumAddress') ?? "";
+
+      print('Sending Ether to: $receiverAddress');
 
       final newCheckIn = {
         'time': DateTime.now(),
@@ -180,15 +195,26 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
         'email': email,
         'studentId': studentId,
         'status': status,
-        // 'rewardAmount': rewardAmount,
-        // 'balanceAmount': balanceAmount,
-        // 'rewardAmount': rewardAmount,
-        // 'balanceInt': balanceInt,
+        'rewardAmount': rewardAmount,
+        'balanceAmount': balanceAmount,
       };
 
+      print('Receiver Address before sending Ether: $receiverAddress');
+// ส่ง Ether
+      await sendEther(receiverAddress);
+
+      // อัพเดทยอด Ether ที่มีอยู่
+      final ethAddress = await fetchUserEthereumAddress(currentUserUid);
+      if (ethAddress != null) {
+        await getBalance(ethAddress);
+      } else {
+        print('Failed to fetch Ethereum Address for user UID: $currentUserUid');
+      }
       await attendanceScheduleRef.update({
         'studentsChecked': FieldValue.arrayUnion([newCheckIn])
       });
+      print('Current balance: $balanceAmount');
+
       // ไปที่ document ของวิชาที่นิสิตเข้าร่วมใน firestore
       final studentSubjectRef = _firestore
           .collection('users')
@@ -207,50 +233,88 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
           //... ข้อมูลที่คุณต้องการจะเก็บไว้
         });
       }
-      // // อัพเดต field ที่ต้องการใน document ที่ตรงกับวันที่
-      // await studentAttendanceScheduleRef.update({
-      //   'studentsCheckedRecords': FieldValue.arrayUnion([newCheckIn])
-      // });
-      // final url = 'http://10.0.2.2:3000/checkAttendanceAndReward';
-      // final response = await http.post(
-      //   Uri.parse(url),
-      //   body: jsonEncode({
-      //     'sender': ethereumAddress,
-      //     'date': DateTime.now().millisecondsSinceEpoch.toString(),
-      //   }),
-      //   headers: {
-      //     'Content-Type': 'application/json'
-      //   }, // ระบุ header ให้เป็น json
-      // );
-
-      // if (response.statusCode == 200) {
-      //   final Map<String, dynamic> responseData = jsonDecode(response.body);
-      //   rewardAmount = responseData['rewardAmount'];
-      //   setState(() {}); // notify framework to rebuild widget
-      // } else {
-      //   print('Error: ${response.body}');
-      //   print(ethereumAddress);
-      // }
-
-      print('Updated Firestore with new check-in data.');
+      // อัพเดต field ที่ต้องการใน document ที่ตรงกับวันที่
+      await studentAttendanceScheduleRef.update({
+        'studentsCheckedRecords': FieldValue.arrayUnion([newCheckIn])
+      });
+      print('Updated Firestore with new check-in data: $newCheckIn');
     } catch (e) {
-      print('Error: $e');
+      print('Error occurred: $e');
+
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Check-in Failed!'),
       ));
     }
   }
 
-  // Future<void> getBalance() async {
-  //   final url = 'http://10.0.2.2:3000/getBalance/$currentUserUid';
-  //   final response = await http.get(Uri.parse(url));
-  //   if (response.statusCode == 200) {
-  //     final Map<String, dynamic> responseData = jsonDecode(response.body);
-  //     balanceAmount =
-  //         responseData['balanceAmount']; // update the state variable
-  //     setState(() {}); // notify framework to rebuild widget
-  //   }
-  // }
+  Future<void> sendEther(String receiverAddress) async {
+    print('Sending Ether to address: $receiverAddress...');
+    print('Inside sendEther function with address: $receiverAddress');
+
+    final url = 'http://10.0.2.2:3000/sendEther';
+
+    final response = await http.post(
+      Uri.parse(url),
+      body: jsonEncode({
+        'receiverAddress': receiverAddress,
+      }),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    print(response.body);
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+      if (responseData.containsKey('rewardAmount')) {
+        try {
+          setState(() {
+            rewardAmount =
+                double.parse(responseData['rewardAmount'].toString());
+          });
+          print('Ether sent successfully. Reward Amount: $rewardAmount');
+        } catch (e) {
+          print('Error parsing rewardAmount: $e');
+        }
+      } else {
+        print('Error: Response does not contain rewardAmount.');
+      }
+    } else {
+      print('Error with the response: ${response.body}');
+    }
+  }
+
+  Future<void> getBalance(String ethAddress) async {
+    print('Fetching balance for Ethereum address: $ethAddress...');
+
+    final url = 'http://10.0.2.2:3000/getBalance/$ethAddress';
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+      if (responseData.containsKey('balanceInEther')) {
+        try {
+          balanceAmount =
+              double.parse(responseData['balanceInEther'].toString());
+          setState(() {}); // notify framework to rebuild widget
+        } catch (e) {
+          print('Error parsing balanceInEther: $e');
+        }
+      } else {
+        print('Error: Unexpected response body');
+      }
+    }
+  }
+
+  Future<String?> fetchUserEthereumAddress(String uid) async {
+    final userDocument = await _firestore.collection('users').doc(uid).get();
+
+    if (userDocument.exists) {
+      return userDocument.data()?['ethereumAddress'];
+    } else {
+      print('No user found for this UID: $uid');
+      return null;
+    }
+  }
 
   AppBar _buildAppBar() {
     return AppBar(
@@ -428,32 +492,20 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
                                     'เวลา ${DateFormat('HH:mm').format(time)}'),
                               ],
                             ),
-                            // Row(
-                            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            //   children: [
-                            //     Text(
-                            //       'เหรียญที่ได้รับ: ${rewardAmount ?? " not available"}',
-                            //       style: TextStyle(
-                            //           fontSize: 14, color: Colors.green),
-                            //     ),
-                            //     Text(
-                            //       'เหรียญที่มีอยู่: ${balanceAmount ?? 0.0}',
-                            //       style: TextStyle(fontSize: 14),
-                            //     ),
-                            //   ],
-                            // )
-                            // Row(
-                            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            //   children: [
-                            //     Text(
-                            //       'เหรียญที่ได้รับ: ',
-                            //       style: TextStyle(
-                            //           fontSize: 14, color: Colors.green),
-                            //     ),
-                            //     Text(
-                            //         'เหรียญที่มีอยู่: $: 'Loading...'}'),
-                            //   ],
-                            // )
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'เหรียญที่ได้รับ: ${rewardAmount ?? " not available"}',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.green),
+                                ),
+                                Text(
+                                  'เหรียญที่มีอยู่: ${balanceAmount ?? 0.0}',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ],
+                            )
                           ],
                         ),
                       ),
