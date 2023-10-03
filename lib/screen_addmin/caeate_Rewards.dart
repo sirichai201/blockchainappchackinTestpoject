@@ -60,7 +60,7 @@ class _CreateRewardsState extends State<CreateRewards> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Reward'),
+        title: Text('สร้างของรางวัล'),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
