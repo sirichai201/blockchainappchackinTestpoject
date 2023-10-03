@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:blockchainappchackin/screen_addmin/user_admin.dart';
 
+import 'EditRewardPage.dart';
+
 class RewardsList extends StatefulWidget {
   @override
   _RewardsListState createState() => _RewardsListState();
@@ -14,7 +16,7 @@ class _RewardsListState extends State<RewardsList> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Rewards List'),
+        title: Text('รายการของรางวัล'),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
@@ -37,10 +39,12 @@ class _RewardsListState extends State<RewardsList> {
               final reward = rewards[index];
               final data = reward.data() as Map<String, dynamic>;
 
-              final name = data.containsKey('name') ? data['name'] : 'No Name';
-              final coin = data.containsKey('coin') ? data['coin'] : 'No Coin Value';
-              final quantity = data.containsKey('quantity') ? data['quantity'] : 'No Quantity';
-              final imageUrl = data.containsKey('imageUrl') ? data['imageUrl'] : null;
+              data['id'] = reward.id; // ใส่ id ในข้อมูล reward
+
+              final name = data['name'] ?? 'No Name';
+              final coin = data['coin'] ?? 'No Coin Value';
+              final quantity = data['quantity'] ?? 'No Quantity';
+              final imageUrl = data['imageUrl'];
 
               return ListTile(
                 title: Text(name),
@@ -48,30 +52,45 @@ class _RewardsListState extends State<RewardsList> {
                 leading: imageUrl != null
                   ? Image.network(imageUrl, width: 50, fit: BoxFit.cover,)
                   : Icon(Icons.image_not_supported),
-                trailing: IconButton(
-                  icon: Icon(Icons.delete, color: Colors.red,),
-                  onPressed: () async {
-                    await showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('Confirm Delete'),
-                        content: Text('Are you sure you want to delete $name?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: Text('Cancel'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.edit, color: Colors.blue,),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => EditRewardPage(reward: data), 
                           ),
-                          TextButton(
-                            onPressed: () async {
-                              Navigator.of(context).pop();
-                              await reward.reference.delete();
-                            },
-                            child: Text('Delete'),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete, color: Colors.red,),
+                      onPressed: () async {
+                        await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Confirm Delete'),
+                            content: Text('Are you sure you want to delete $name?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () async {
+                                  Navigator.of(context).pop();
+                                  await reward.reference.delete();
+                                },
+                                child: Text('Delete'),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ],
                 ),
               );
             },

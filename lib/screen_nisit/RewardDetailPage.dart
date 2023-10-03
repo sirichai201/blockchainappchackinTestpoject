@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RewardDetailPage extends StatelessWidget {
   final DocumentSnapshot reward;
@@ -7,6 +8,15 @@ class RewardDetailPage extends StatelessWidget {
   RewardDetailPage({required this.reward});
 
   Future<void> _decrementRewardQuantity(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('กรุณาเข้าสู่ระบบ')),
+      );
+      return;
+    }
+
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final rewardDoc = FirebaseFirestore.instance.collection('rewards').doc(reward.id);
@@ -15,12 +25,18 @@ class RewardDetailPage extends StatelessWidget {
 
         if (currentQuantity > 0) {
           transaction.update(rewardDoc, {'quantity': currentQuantity - 1});
-          
-          // แสดง SnackBar เมื่อการแลกสำเร็จ
+
+          await FirebaseFirestore.instance.collection('redeem_history').doc(user.uid).collection('items').add({
+            'reward_name': rewardData['name'],
+            'cost': rewardData['coin'],   // ทำการเปลี่ยนเป็น 'coin'
+            'redeemed_at': Timestamp.now(),
+            'imageUrl': rewardData['imageUrl'] ?? '',
+          });
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('ทำการแลกเรียบร้อย')),
           );
-          // ย้อนกลับไปที่หน้า Redeem Rewards
+
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -38,12 +54,12 @@ class RewardDetailPage extends StatelessWidget {
     final data = reward.data() as Map<String, dynamic>;
     final name = data['name'] as String? ?? 'Unknown';
     final imageUrl = data['imageUrl'] as String? ?? '';
-    final cost = data['cost'] as int? ?? 0;
+    final coin = data['coin'] as int? ?? 0;   // ทำการเปลี่ยนเป็น 'coin'
     final remainingQuantity = data['quantity'] as int? ?? 0;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Reward Detail'),
+        title: Text('รายละเอียดของรางวัล'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -53,7 +69,7 @@ class RewardDetailPage extends StatelessWidget {
             if (imageUrl.isNotEmpty)
               Image.network(imageUrl),
             Text('Name: $name'),
-            Text('Cost: $cost coins'),
+            Text('Cost: $coin coins'),   // ทำการเปลี่ยนเป็น 'coin'
             Text('Remaining Quantity: $remainingQuantity'),
             ElevatedButton(
               onPressed: remainingQuantity > 0 ? () async {
@@ -65,11 +81,11 @@ class RewardDetailPage extends StatelessWidget {
                       content: Text('คุณต้องการแลกของรางวัลนี้หรือไม่?'),
                       actions: <Widget>[
                         TextButton(
-                          onPressed: () => Navigator.of(context).pop(false), // ยกเลิก
+                          onPressed: () => Navigator.of(context).pop(false),
                           child: Text('ยกเลิก'),
                         ),
                         TextButton(
-                          onPressed: () => Navigator.of(context).pop(true), // ยืนยัน
+                          onPressed: () => Navigator.of(context).pop(true),
                           child: Text('ยืนยัน'),
                         ),
                       ],
@@ -80,7 +96,7 @@ class RewardDetailPage extends StatelessWidget {
                 if (confirm == true) {
                   await _decrementRewardQuantity(context);
                 }
-              } : null, // ปุ่มจะถูกปิดใช้งานถ้า remainingQuantity <= 0
+              } : null,
               child: Text('ยืนยันการแลกของรางวัล'),
             ),
           ],
