@@ -100,11 +100,16 @@ class _HistoryNisitState extends State<HistoryNisit> {
         final time = studentMap['time'];
         final studentId = studentMap['studentId'] ?? 'unknown student';
         final name = studentMap['name'] ?? 'unknown name';
+        final balanceInEther =
+            studentMap['balanceInEther'] ?? 'unknown balance';
+        final rewardAmount = studentMap['rewardAmount'] ?? 'unknown reward';
         return {
           'status': status,
           'time': time,
           'studentId': studentId,
           'name': name,
+          'balanceInEther': balanceInEther, // Add this
+          'rewardAmount': rewardAmount, // And this
         };
       }).toList();
 
@@ -118,7 +123,7 @@ class _HistoryNisitState extends State<HistoryNisit> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-            icon: Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
               Navigator.pushReplacement(context,
                   MaterialPageRoute(builder: (context) => UserNisit()));
@@ -127,7 +132,7 @@ class _HistoryNisitState extends State<HistoryNisit> {
       ),
       body: subjectsList
               .isEmpty // ถ้า subjectsList ว่าง ให้แสดง loading indicator
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               // ถ้า subjectsList มีข้อมูล ให้แสดงรายการ widgets
               child: Padding(
@@ -141,8 +146,8 @@ class _HistoryNisitState extends State<HistoryNisit> {
                           value: year,
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today),
-                              SizedBox(width: 50),
+                              const Icon(Icons.calendar_today),
+                              const SizedBox(width: 50),
                               Text(year),
                             ],
                           ),
@@ -161,8 +166,8 @@ class _HistoryNisitState extends State<HistoryNisit> {
                           value: term,
                           child: Row(
                             children: [
-                              Icon(Icons.format_list_numbered),
-                              SizedBox(width: 50),
+                              const Icon(Icons.format_list_numbered),
+                              const SizedBox(width: 50),
                               Text(term),
                             ],
                           ),
@@ -182,8 +187,8 @@ class _HistoryNisitState extends State<HistoryNisit> {
                           value: subject,
                           child: Row(
                             children: [
-                              Icon(Icons.book),
-                              SizedBox(width: 50),
+                              const Icon(Icons.book),
+                              const SizedBox(width: 50),
                               Text(subject),
                             ],
                           ),
@@ -247,8 +252,10 @@ class _HistoryNisitState extends State<HistoryNisit> {
                       ...attendanceList.map((attendance) {
                         print(
                             'Building Card for ${attendance['studentId'] ?? 'unknown student'}');
+
                         return Card(
                           margin: const EdgeInsets.symmetric(vertical: 8.0),
+                          elevation: 5,
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
@@ -269,8 +276,74 @@ class _HistoryNisitState extends State<HistoryNisit> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                        'สถานะ: ${attendance['status'] ?? 'ไม่มีข้อมูล'}'),
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          const TextSpan(
+                                            text: 'สถานะ: ',
+                                            style:
+                                                TextStyle(color: Colors.black),
+                                          ),
+                                          TextSpan(
+                                            text:
+                                                '${attendance['status'] ?? 'ไม่มีข้อมูล'}',
+                                            style: TextStyle(
+                                              color: attendance['status'] ==
+                                                      'attended'
+                                                  ? Colors.green
+                                                  : attendance['status'] ==
+                                                          'leave'
+                                                      ? Colors.blue
+                                                      : Colors.black,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  ],
+                                ),
+                                const SizedBox(
+                                  height: 8.0,
+                                  width: 20,
+                                ),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          const TextSpan(
+                                            text: 'ยอดเงินคงเหลือ: ',
+                                            style:
+                                                TextStyle(color: Colors.black),
+                                          ),
+                                          TextSpan(
+                                            text:
+                                                '${attendance['balanceInEther'] ?? 'ไม่มีข้อมูล'}',
+                                            style: const TextStyle(
+                                                color: Colors.green),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          const TextSpan(
+                                            text: 'ที่ได้รับ: ',
+                                            style:
+                                                TextStyle(color: Colors.black),
+                                          ),
+                                          TextSpan(
+                                            text:
+                                                '${attendance['rewardAmount'] ?? 'ไม่มีข้อมูล'}',
+                                            style: const TextStyle(
+                                                color: Colors.green),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(
