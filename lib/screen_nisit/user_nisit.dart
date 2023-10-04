@@ -27,34 +27,45 @@ class _UserNisitState extends State<UserNisit> {
   }
 
   Future<void> initUserEthereumAddress() async {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUserUid)
-        .get();
-    final data = userDoc.data() as Map<String, dynamic>?;
-
-    if (data != null &&
-        data.containsKey('ethereumAddress') &&
-        data['ethereumAddress'] != null) {
-      print('User has Ethereum Address: ${data['ethereumAddress']}');
-    } else {
-      final url = Uri.parse('http://10.0.2.2:3000/createEthereumAddress');
-      final response = await http.post(url, body: {'userId': currentUserUid});
-
-      if (response.statusCode == 200) {
-        final newEthereumAddress = jsonDecode(response.body)['ethereumAddress'];
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUserUid)
-            .set({
-          'ethereumAddress': newEthereumAddress,
-        }, SetOptions(merge: true));
-
-        print('Created and set new Ethereum Address: $newEthereumAddress');
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserUid)
+          .get();
+      final data = userDoc.data() as Map<String, dynamic>?;
+      print('Current User UID: $currentUserUid');
+      if (data != null &&
+          data.containsKey('ethereumAddress') &&
+          data['ethereumAddress'] != null) {
+        print('User has Ethereum Address: ${data['ethereumAddress']}');
       } else {
-        print('Failed to create Ethereum Address: ${response.body}');
+        final url = Uri.parse('http://10.0.2.2:3000/createEthereumAddress');
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'userId': currentUserUid}),
+        );
+
+        if (response.statusCode == 200) {
+          final responseBody = jsonDecode(response.body);
+          final newEthereumAddress = responseBody['ethereumAddress'];
+
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUserUid)
+              .set({
+            'ethereumAddress': newEthereumAddress,
+            'ethereumPrivateKey': responseBody['ethereumPrivateKey'],
+          }, SetOptions(merge: true));
+
+          print('Created and set new Ethereum Address: $newEthereumAddress');
+        } else {
+          print('Failed to create Ethereum Address: ${response.body}');
+        }
       }
+    } catch (error) {
+      print('Error during initUserEthereumAddress: $error');
+      // TODO: แสดง error message หรือใช้ UI indicator แสดงสถานะ error ใน app ของคุณ
     }
   }
 

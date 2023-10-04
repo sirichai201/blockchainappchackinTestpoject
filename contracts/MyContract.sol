@@ -2,44 +2,60 @@
 pragma solidity ^0.8.4;
 
 contract MyContract {
-    // จัดเก็บข้อมูลการเช็คชื่อของนักศึกษา
-    mapping(address => mapping(uint256 => bool)) public attendanceRecords;
-    // จัดเก็บยอดเงินของนักศึกษา
+    
+    // ยอดเงิน (ควอยน์) ของนักศึกษาแต่ละคน
     mapping(address => uint256) public balances;
-    
-    // ประกาศ event เพื่อบันทึกเมื่อนักศึกษาเช็คชื่อและรับรางวัล
-    event CheckedIn(address indexed student, uint256 date, uint256 rewardAmount);
-    // ประกาศ event เพื่อบันทึกเมื่อนักศึกษาใช้เหรียญ
+
+    // ที่อยู่ของเจ้าของสัญญา
+    address public owner;
+
+    // กำหนดเหตุการณ์เมื่อนักศึกษาใช้ควอยน์
     event SpentCoin(address indexed student, uint256 amount);
-    
-    function checkAttendanceAndReward(uint256 date) public {
-    
 
-    // เพิ่ม balance ของผู้ที่เช็คชื่อ
-    balances[msg.sender] += 0.02 ether;
-    attendanceRecords[msg.sender][date] = true;
-        
-    // ทำการ emit event สำหรับการเช็คชื่อ
-    emit CheckedIn(msg.sender, date, 0.02 ether);
-}
+    // กำหนดเหตุการณ์เมื่อนักศึกษาได้รับควอยน์รางวัล
+    event Rewarded(address indexed student, uint256 amount);
 
-    
-    
-    
+    // ฟังก์ชันสร้างเมื่อสัญญาถูกสร้าง
+    constructor() {
+        owner = msg.sender;
+    }
+
+    // ตัวคัดกรอง: เฉพาะเจ้าของสัญญาเท่านั้นที่สามารถเรียกใช้
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
+    }
+
+    // ฟังก์ชันสำหรับฝากเงินเข้าสัญญา
+    function deposit() public payable onlyOwner {}
+
+    // ฟังก์ชันสำหรับตรวจสอบยอดควอยน์ของนักศึกษา
     function getBalance() public view returns (uint256) {
-        // ดึงยอดเงินปัจจุบันของนักศึกษา
         return balances[msg.sender];
     }
-    
+
+    // ฟังก์ชันให้นักศึกษาใช้ควอยน์
     function spendCoin(uint256 amount) public {
-        // ตรวจสอบว่านักศึกษามียอดเงินเพียงพอที่จะใช้จ่าย
         require(balances[msg.sender] >= amount, "Insufficient balance");
-        
-        // หักยอดเงินของนักศึกษาที่ใช้จ่าย
         balances[msg.sender] -= amount;
-        
-        // ทำการ emit event สำหรับการใช้เหรียญ
         emit SpentCoin(msg.sender, amount);
     }
-}
 
+    // ฟังก์ชันให้ควอยน์รางวัลนักศึกษาที่เช็คชื่อ
+    function rewardStudent(address student) public onlyOwner {
+        // จำนวนเงินที่ต้องการโอน
+        uint256 rewardAmountEther = 0.05 ether;
+
+        // ตรวจสอบว่าสัญญามีเงินเพียงพอที่จะส่งหรือไม่
+        require(address(this).balance >= rewardAmountEther, "Contract does not have enough ether to reward");
+
+        // โอน ether ไปยังที่อยู่ของนักเรียน
+        payable(student).transfer(rewardAmountEther);
+    
+        // เพิ่มยอดเหรียญใน balances
+        balances[student] += rewardAmountEther;
+
+        // ส่งอีเวนท์แจ้งว่านักศึกษาได้รับควอยน์รางวัล
+        emit Rewarded(student, rewardAmountEther);
+    }
+}
