@@ -9,6 +9,8 @@ class RewardDetailPage extends StatelessWidget {
 
   Future<void> _decrementRewardQuantity(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
+    final data = reward.data() as Map<String, dynamic>;
+    final coin = data['coin'] as int? ?? 0;
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -23,12 +25,17 @@ class RewardDetailPage extends StatelessWidget {
         final rewardData = (await transaction.get(rewardDoc)).data() as Map<String, dynamic>;
         int currentQuantity = rewardData['quantity'] ?? 0;
 
-        if (currentQuantity > 0) {
+        final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+        final userData = (await transaction.get(userDoc)).data() as Map<String, dynamic>;
+        int currentUserCoins = userData['coins'] ?? 0;
+
+        if (currentQuantity > 0 && currentUserCoins >= coin) {
           transaction.update(rewardDoc, {'quantity': currentQuantity - 1});
+          transaction.update(userDoc, {'coins': currentUserCoins - coin});
 
           await FirebaseFirestore.instance.collection('redeem_history').doc(user.uid).collection('items').add({
             'reward_name': rewardData['name'],
-            'cost': rewardData['coin'],   // ทำการเปลี่ยนเป็น 'coin'
+            'cost': coin,
             'redeemed_at': Timestamp.now(),
             'imageUrl': rewardData['imageUrl'] ?? '',
           });
@@ -38,6 +45,10 @@ class RewardDetailPage extends StatelessWidget {
           );
 
           Navigator.pop(context);
+        } else if (currentUserCoins < coin) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('เหรียญไม่เพียงพอสำหรับการแลก')),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('ของรางวัลหมดแล้ว')),
@@ -54,7 +65,7 @@ class RewardDetailPage extends StatelessWidget {
     final data = reward.data() as Map<String, dynamic>;
     final name = data['name'] as String? ?? 'Unknown';
     final imageUrl = data['imageUrl'] as String? ?? '';
-    final coin = data['coin'] as int? ?? 0;   // ทำการเปลี่ยนเป็น 'coin'
+    final coin = data['coin'] as int? ?? 0;
     final remainingQuantity = data['quantity'] as int? ?? 0;
 
     return Scaffold(
@@ -69,7 +80,7 @@ class RewardDetailPage extends StatelessWidget {
             if (imageUrl.isNotEmpty)
               Image.network(imageUrl),
             Text('Name: $name'),
-            Text('Cost: $coin coins'),   // ทำการเปลี่ยนเป็น 'coin'
+            Text('Cost: $coin coins'),
             Text('Remaining Quantity: $remainingQuantity'),
             ElevatedButton(
               onPressed: remainingQuantity > 0 ? () async {
