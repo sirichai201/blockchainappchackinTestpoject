@@ -189,18 +189,6 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
       print('Sending Ether to: $receiverAddress');
 
-      final newCheckIn = {
-        'time': DateTime.now(),
-        'uid': currentUserUid,
-        'name': username,
-        'email': email,
-        'studentId': studentId,
-        'status': status,
-        'rewardAmount': rewardAmount,
-        'balanceInEther': balanceInEther,
-      };
-
-      print('Receiver Address before sending Ether: $receiverAddress');
 // ส่ง Ether
       await sendEther(receiverAddress);
 
@@ -211,10 +199,23 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       } else {
         print('Failed to fetch Ethereum Address for user UID: $currentUserUid');
       }
+
+      final newCheckIn = {
+        'time': DateTime.now(),
+        'uid': currentUserUid,
+        'name': username,
+        'email': email,
+        'studentId': studentId,
+        'status': status,
+        'rewardAmount': rewardAmount,
+        'balanceInEther': balanceInEther,
+      };
+      print(
+          'Preparing to update Firestore with the following data: $newCheckIn');
       await attendanceScheduleRef.update({
         'studentsChecked': FieldValue.arrayUnion([newCheckIn])
       });
-      print('Current balance: $balanceInEther');
+      print('Updated Firestore with new check-in data: $newCheckIn');
 
       // ไปที่ document ของวิชาที่นิสิตเข้าร่วมใน firestore
       final studentSubjectRef = _firestore
@@ -238,7 +239,6 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
       await studentAttendanceScheduleRef.update({
         'studentsCheckedRecords': FieldValue.arrayUnion([newCheckIn])
       });
-      print('Updated Firestore with new check-in data: $newCheckIn');
     } catch (e) {
       print('Error occurred: $e');
 
@@ -269,11 +269,8 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
       if (responseData.containsKey('rewardAmount')) {
         try {
-          setState(() {
-            rewardAmount =
-                double.parse(responseData['rewardAmount'].toString());
-          });
-          print('Ether sent successfully. Reward Amount: $rewardAmount');
+          rewardAmount = double.parse(responseData['rewardAmount'].toString());
+          print('Ether sent successfully. New Reward Amount: $rewardAmount');
         } catch (e) {
           print('Error parsing rewardAmount: $e');
         }
@@ -296,11 +293,11 @@ class _SubjectDetailNisitState extends State<SubjectDetailNisit> {
 
       if (responseData.containsKey('balanceInEther')) {
         try {
-          setState(() {
-            balanceInEther =
-                double.parse(responseData['balanceInEther'].toString());
-          });
-          print('Balance in Ether: $balanceInEther');
+          balanceInEther =
+              double.parse(responseData['balanceInEther'].toString());
+          print(
+              'Balance fetched successfully. Current Balance in Ether: $balanceInEther');
+
           // ทำสิ่งที่คุณต้องการด้วย balanceInEther
         } catch (e) {
           print('Error parsing balanceInEther: $e');
