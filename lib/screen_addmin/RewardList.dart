@@ -42,8 +42,10 @@ class _RewardsListState extends State<RewardsList> {
               data['id'] = reward.id; // ใส่ id ในข้อมูล reward
 
               final name = data['name'] ?? 'No Name';
-              final coin = data['coin'] ?? 'No Coin Value';
-              final quantity = data['quantity'] ?? 'No Quantity';
+              final coin = (data['coin'] is double) 
+                          ? data['coin'].toStringAsFixed(2) 
+                          : data['coin'].toString(); // Display as decimal if double
+              final quantity = data['quantity']?.toString() ?? 'No Quantity';
               final imageUrl = data['imageUrl'];
 
               return ListTile(

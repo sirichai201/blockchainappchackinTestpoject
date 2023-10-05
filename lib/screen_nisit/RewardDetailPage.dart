@@ -2,70 +2,66 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class RewardDetailPage extends StatelessWidget {
+class RewardDetailPage extends StatefulWidget {
   final DocumentSnapshot reward;
+  final double userCoins;
+  final double balanceInEther;
 
-  RewardDetailPage({required this.reward});
+  RewardDetailPage({required this.reward, required this.userCoins, required this.balanceInEther}); // แก้ไข constructor ให้รองรับ
 
-  Future<void> _decrementRewardQuantity(BuildContext context) async {
+  @override
+  _RewardDetailPageState createState() => _RewardDetailPageState();
+}
+
+class _RewardDetailPageState extends State<RewardDetailPage> {
+  void _showSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _redeemReward(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
-    final data = reward.data() as Map<String, dynamic>;
-    final coin = data['coin'] as int? ?? 0;
+    final data = widget.reward.data() as Map<String, dynamic>;
+    final coin = (data['coin'] as num?)?.toDouble() ?? 0.0;
 
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('กรุณาเข้าสู่ระบบ')),
-      );
+    if (widget.userCoins < coin) {
+      _showSnackBar(context, 'เหรียญไม่เพียงพอสำหรับการแลก');
       return;
     }
 
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
-        final rewardDoc = FirebaseFirestore.instance.collection('rewards').doc(reward.id);
-        final rewardData = (await transaction.get(rewardDoc)).data() as Map<String, dynamic>;
-        int currentQuantity = rewardData['quantity'] ?? 0;
+        final rewardRef = FirebaseFirestore.instance.collection('rewards').doc(widget.reward.id);
+        final userRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
 
-        final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
-        final userData = (await transaction.get(userDoc)).data() as Map<String, dynamic>;
-        int currentUserCoins = userData['coins'] ?? 0;
+        final currentReward = await transaction.get(rewardRef);
+        final currentUser = await transaction.get(userRef);
 
-        if (currentQuantity > 0 && currentUserCoins >= coin) {
-          transaction.update(rewardDoc, {'quantity': currentQuantity - 1});
-          transaction.update(userDoc, {'coins': currentUserCoins - coin});
+        int currentQuantity = currentReward['quantity'] ?? 0;
+        double currentUserCoins = (currentUser['coins'] as num?)?.toDouble() ?? 0.0;
 
-          await FirebaseFirestore.instance.collection('redeem_history').doc(user.uid).collection('items').add({
-            'reward_name': rewardData['name'],
-            'cost': coin,
-            'redeemed_at': Timestamp.now(),
-            'imageUrl': rewardData['imageUrl'] ?? '',
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ทำการแลกเรียบร้อย')),
-          );
-
-          Navigator.pop(context);
-        } else if (currentUserCoins < coin) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('เหรียญไม่เพียงพอสำหรับการแลก')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ของรางวัลหมดแล้ว')),
-          );
+        if (currentQuantity <= 0) {
+          _showSnackBar(context, 'ของรางวัลหมดแล้ว');
+          return;
         }
+
+        transaction.update(rewardRef, {'quantity': currentQuantity - 1});
+        transaction.update(userRef, {'coins': currentUserCoins - coin});
+
+        _showSnackBar(context, 'ทำการแลกเรียบร้อย');
+        Navigator.pop(context);
       });
     } catch (e) {
-      print('เกิดข้อผิดพลาดในการลดจำนวนของรางวัล: $e');
+      print('Error redeeming reward: $e');
+      _showSnackBar(context, 'เกิดข้อผิดพลาด: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final data = reward.data() as Map<String, dynamic>;
+    final data = widget.reward.data() as Map<String, dynamic>;
     final name = data['name'] as String? ?? 'Unknown';
     final imageUrl = data['imageUrl'] as String? ?? '';
-    final coin = data['coin'] as int? ?? 0;
+    final coin = (data['coin'] as num?)?.toDouble() ?? 0.0;
     final remainingQuantity = data['quantity'] as int? ?? 0;
 
     return Scaffold(
@@ -77,37 +73,14 @@ class RewardDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (imageUrl.isNotEmpty)
-              Image.network(imageUrl),
+            Text('ยอดเหรียญของคุณ: ${widget.userCoins.toStringAsFixed(2)} เหรียญ'),
+            SizedBox(height: 10.0),
+            if (imageUrl.isNotEmpty) Image.network(imageUrl),
             Text('Name: $name'),
-            Text('Cost: $coin coins'),
+            Text('Cost: ${coin.toStringAsFixed(2)} coins'),
             Text('Remaining Quantity: $remainingQuantity'),
             ElevatedButton(
-              onPressed: remainingQuantity > 0 ? () async {
-                bool? confirm = await showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('ยืนยันการแลกของ'),
-                      content: Text('คุณต้องการแลกของรางวัลนี้หรือไม่?'),
-                      actions: <Widget>[
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: Text('ยกเลิก'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: Text('ยืนยัน'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-
-                if (confirm == true) {
-                  await _decrementRewardQuantity(context);
-                }
-              } : null,
+              onPressed: () => _redeemReward(context),
               child: Text('ยืนยันการแลกของรางวัล'),
             ),
           ],

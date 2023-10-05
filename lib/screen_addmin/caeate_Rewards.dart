@@ -10,9 +10,6 @@ class CreateRewards extends StatefulWidget {
   _CreateRewardsState createState() => _CreateRewardsState();
 }
 
-
-
-
 class _CreateRewardsState extends State<CreateRewards> {
   final _formKey = GlobalKey<FormState>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -20,7 +17,7 @@ class _CreateRewardsState extends State<CreateRewards> {
   final ImagePicker _picker = ImagePicker();
 
   String? name;
-  int? coin;
+  double? coin;
   int? quantity;
   File? _imageFile;
 
@@ -47,7 +44,7 @@ class _CreateRewardsState extends State<CreateRewards> {
       await _firestore.collection('rewards').add({
         'name': name,
         'imageUrl': imageUrl,
-        'cost': coin,
+        'coin': coin,
         'quantity': quantity,
       });
 
@@ -78,35 +75,34 @@ class _CreateRewardsState extends State<CreateRewards> {
               if (_imageFile != null) Image.file(_imageFile!),
               ElevatedButton(
                 onPressed: pickImage,
-                child: Text('Pick Image'),
+                child: Text('เลือกรูปภาพ'),
               ),
               TextFormField(
-                decoration: InputDecoration(labelText: 'Name'),
-                validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                decoration: InputDecoration(labelText: 'ชื่อของรางวัล'),
+                validator: (value) => value?.isEmpty == true ? 'กรุณาใส่ชื่อของรางวัล' : null,
                 onSaved: (value) => name = value,
               ),
               TextFormField(
-                decoration: InputDecoration(labelText: 'Coin'),
-                keyboardType: TextInputType.number,
-                validator: (value) =>
-                    value == null || int.tryParse(value) == null
-                        ? 'Invalid number'
-                        : null,
-                onSaved: (value) => coin = int.tryParse(value ?? ''),
+                decoration: InputDecoration(labelText: 'จำนวนเหรียญที่ต้องการ'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) => value == null || double.tryParse(value) == null
+                    ? 'กรุณาใส่จำนวนเหรียญในรูปแบบที่ถูกต้อง'
+                    : null,
+                onSaved: (value) => coin = double.tryParse(value ?? '0'),
               ),
               TextFormField(
-                decoration: InputDecoration(labelText: 'Quantity'),
+                decoration: InputDecoration(labelText: 'จำนวนของรางวัล'),
                 keyboardType: TextInputType.number,
                 validator: (value) =>
                     value == null || int.tryParse(value) == null
-                        ? 'Invalid number'
+                        ? 'กรุณาใส่จำนวนของรางวัลในรูปแบบที่ถูกต้อง'
                         : null,
-                onSaved: (value) => quantity = int.tryParse(value ?? ''),
+                onSaved: (value) => quantity = int.tryParse(value ?? '0'),
               ),
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: addReward,
-                child: Text('Add Reward'),
+                child: Text('ยืนยัน'),
               ),
             ],
           ),
