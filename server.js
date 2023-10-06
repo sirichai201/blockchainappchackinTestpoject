@@ -135,7 +135,7 @@ const contractABI = [
     "type": "function"
   }
 ];
-const contractAddress = '0x469559b1Bb19E22B9CD0C49E5FC03960130dB123';
+const contractAddress = '0xb97F588B8D7b827061771528976Ed467676d303d';
 
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
@@ -165,7 +165,7 @@ app.post('/sendEther', async (req, res) => {
     }
     console.log(`เริ่มต้นการส่ง Ether ไปยัง ${receiverAddress}...`);
 
-    const senderAddress = '0x469559b1Bb19E22B9CD0C49E5FC03960130dB123';
+    const senderAddress = '0xb97F588B8D7b827061771528976Ed467676d303d';
     const privateKey = process.env.PRIVATE_KEY;
     const amountInEther = '0.05';
     const amountInWei = web3.utils.toWei(amountInEther, 'ether');
