@@ -444,7 +444,7 @@ class _CheckInPageState extends State<CheckInPage> {
                     }
                   } else {
                     print(
-                        "Cannot check-in: Settings not ready or not within time range.");
+                        "Cannot check-in: Settings not ready or not within time range.555");
                   }
                 });
               },
