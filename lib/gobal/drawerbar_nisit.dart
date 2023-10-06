@@ -1,4 +1,3 @@
-import 'package:blockchainappchackin/screen_nisit/RewardDetailPage.dart';
 import 'package:flutter/material.dart';
 
 import '../screen_login_user_all/login.dart';

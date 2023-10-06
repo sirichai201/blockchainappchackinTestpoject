@@ -22,6 +22,8 @@ class _HistoryNisitState extends State<HistoryNisit> {
   late List<String> uniqueSubjects;
   final subjectController = TextEditingController();
   List<Map<String, dynamic>> attendanceList = []; // For storing attendance data
+  String? statusMessage;
+
   @override
   void initState() {
     super.initState();
@@ -68,10 +70,31 @@ class _HistoryNisitState extends State<HistoryNisit> {
     }
   }
 
-  void loadAttendanceSchedules(String selectedenrolledSubjectsDocId) async {
-    String formattedSelectedDate = DateFormat('yyyy-MM-dd').format(
-        selectedDate); // Change the format to match your document ID format.
+  void loadAttendanceSchedules() async {
+    String formattedSelectedDate =
+        DateFormat('yyyy-MM-dd').format(selectedDate);
 
+    // ขั้นตอนที่ 1: ดึง document ของวิชา
+    final subjectQuery = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userDocId)
+        .collection('enrolledSubjects')
+        .where('name', isEqualTo: selectedSubject)
+        .where('term', isEqualTo: selectedTerm);
+
+    final subjectQuerySnapshot = await subjectQuery.get();
+
+    if (subjectQuerySnapshot.docs.isEmpty) {
+      setState(() {
+        statusMessage = 'ไม่มีเทอมที่เลือก';
+        attendanceList = [];
+      });
+      return;
+    }
+
+    final selectedenrolledSubjectsDocId = subjectQuerySnapshot.docs.first.id;
+
+    // ขั้นตอนที่ 2: ดึงข้อมูลการเข้าเรียน
     final attendanceDocRef = FirebaseFirestore.instance
         .collection('users')
         .doc(userDocId)
@@ -91,7 +114,6 @@ class _HistoryNisitState extends State<HistoryNisit> {
     final data = docSnapshot.data() as Map<String, dynamic>;
     final studentsCheckedRecords =
         (data['studentsCheckedRecords'] as List<dynamic>?) ?? [];
-
     // Use setState to rebuild the widget with the new attendance list.
     setState(() {
       attendanceList = studentsCheckedRecords.map((student) {
@@ -229,13 +251,7 @@ class _HistoryNisitState extends State<HistoryNisit> {
                     ElevatedButton(
                       onPressed: () {
                         if (subjectsList.isNotEmpty) {
-                          final selectedSubjectMap = subjectsList.firstWhere(
-                              (subjectMap) =>
-                                  subjectMap['name'] == selectedSubject,
-                              orElse: () => subjectsList[0]);
-                          final selectedSubjectDocId =
-                              selectedSubjectMap['docId'];
-                          loadAttendanceSchedules(selectedSubjectDocId);
+                          loadAttendanceSchedules();
                         }
                       },
                       child: const Text('ยืนยัน'),
@@ -245,118 +261,122 @@ class _HistoryNisitState extends State<HistoryNisit> {
 
                     const SizedBox(height: 20),
                     ...[
-                      if (attendanceList.isEmpty)
+                      if (statusMessage != null) ...[
+                        Center(child: Text(statusMessage!))
+                      ] else if (attendanceList.isEmpty) ...[
                         Center(
                             child: Text(
-                                'ไม่มีข้อมูลนิสิตในวันที่ ${selectedDate.toLocal().toString().split(' ')[0]}')),
-                      ...attendanceList.map((attendance) {
-                        print(
-                            'Building Card for ${attendance['studentId'] ?? 'unknown student'}');
+                                'ไม่มีข้อมูลนิสิตในวันที่ ${selectedDate.toLocal().toString().split(' ')[0]}'))
+                      ] else ...[
+                        ...attendanceList.map((attendance) {
+                          print(
+                              'Building Card for ${attendance['studentId'] ?? 'unknown student'}');
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8.0),
-                          elevation: 5,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                        'ชื่อ: ${attendance['name'] ?? 'ไม่มีข้อมูล'}'),
-                                    Text(
-                                        'รหัสนิสิต: ${attendance['studentId'] ?? 'ไม่มีข้อมูล'}'),
-                                  ],
-                                ),
-                                const SizedBox(height: 8.0),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    RichText(
-                                      text: TextSpan(
-                                        children: [
-                                          const TextSpan(
-                                            text: 'สถานะ: ',
-                                            style:
-                                                TextStyle(color: Colors.black),
-                                          ),
-                                          TextSpan(
-                                            text:
-                                                '${attendance['status'] ?? 'ไม่มีข้อมูล'}',
-                                            style: TextStyle(
-                                              color: attendance['status'] ==
-                                                      'attended'
-                                                  ? Colors.green
-                                                  : attendance['status'] ==
-                                                          'leave'
-                                                      ? Colors.blue
-                                                      : Colors.black,
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 8.0),
+                            elevation: 5,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                          'ชื่อ: ${attendance['name'] ?? 'ไม่มีข้อมูล'}'),
+                                      Text(
+                                          'รหัสนิสิต: ${attendance['studentId'] ?? 'ไม่มีข้อมูล'}'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8.0),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      RichText(
+                                        text: TextSpan(
+                                          children: [
+                                            const TextSpan(
+                                              text: 'สถานะ: ',
+                                              style: TextStyle(
+                                                  color: Colors.black),
                                             ),
-                                          ),
-                                        ],
+                                            TextSpan(
+                                              text:
+                                                  '${attendance['status'] ?? 'ไม่มีข้อมูล'}',
+                                              style: TextStyle(
+                                                color: attendance['status'] ==
+                                                        'attended'
+                                                    ? Colors.green
+                                                    : attendance['status'] ==
+                                                            'leave'
+                                                        ? Colors.blue
+                                                        : Colors.black,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                  const SizedBox(
+                                    height: 8.0,
+                                    width: 20,
+                                  ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      RichText(
+                                        text: TextSpan(
+                                          children: [
+                                            const TextSpan(
+                                              text: 'ยอดเงินคงเหลือ: ',
+                                              style: TextStyle(
+                                                  color: Colors.black),
+                                            ),
+                                            TextSpan(
+                                              text:
+                                                  '${attendance['balanceInEther'] ?? 'ไม่มีข้อมูล'}',
+                                              style: const TextStyle(
+                                                  color: Colors.green),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    )
-                                  ],
-                                ),
-                                const SizedBox(
-                                  height: 8.0,
-                                  width: 20,
-                                ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    RichText(
-                                      text: TextSpan(
-                                        children: [
-                                          const TextSpan(
-                                            text: 'ยอดเงินคงเหลือ: ',
-                                            style:
-                                                TextStyle(color: Colors.black),
-                                          ),
-                                          TextSpan(
-                                            text:
-                                                '${attendance['balanceInEther'] ?? 'ไม่มีข้อมูล'}',
-                                            style: const TextStyle(
-                                                color: Colors.green),
-                                          ),
-                                        ],
+                                      RichText(
+                                        text: TextSpan(
+                                          children: [
+                                            const TextSpan(
+                                              text: 'ที่ได้รับ: ',
+                                              style: TextStyle(
+                                                  color: Colors.black),
+                                            ),
+                                            TextSpan(
+                                              text:
+                                                  '${attendance['rewardAmount'] ?? 'ไม่มีข้อมูล'}',
+                                              style: const TextStyle(
+                                                  color: Colors.green),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    RichText(
-                                      text: TextSpan(
-                                        children: [
-                                          const TextSpan(
-                                            text: 'ที่ได้รับ: ',
-                                            style:
-                                                TextStyle(color: Colors.black),
-                                          ),
-                                          TextSpan(
-                                            text:
-                                                '${attendance['rewardAmount'] ?? 'ไม่มีข้อมูล'}',
-                                            style: const TextStyle(
-                                                color: Colors.green),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(
-                                  height: 8.0,
-                                  width: 20,
-                                ),
-                                Text(
-                                    'เวลา: ${_formatTimestamp(attendance['time'] as Timestamp)}'),
-                              ],
+                                    ],
+                                  ),
+                                  const SizedBox(
+                                    height: 8.0,
+                                    width: 20,
+                                  ),
+                                  Text(
+                                      'เวลา: ${_formatTimestamp(attendance['time'] as Timestamp)}'),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ],
                     ],
                   ],
                 ),

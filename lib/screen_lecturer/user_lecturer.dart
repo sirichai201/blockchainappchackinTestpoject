@@ -182,43 +182,57 @@ class _UserLecturerState extends State<UserLecturer> {
                 margin:
                     const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 elevation: 8,
+                color: Color.fromARGB(255, 241, 240, 240),
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(15), // Less rounded corners
+                  borderRadius: BorderRadius.circular(15),
+                  side: BorderSide(
+                    color: Color.fromARGB(255, 145, 145, 143),
+                    width: 1.5,
+                  ),
                 ),
-                child: ListTile(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SubjectDetail(
-                          userId: userId,
-                          docId: doc.id,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: ListTile(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SubjectDetail(
+                            userId: userId,
+                            docId: doc.id,
+                          ),
                         ),
+                      );
+                    },
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    leading: Icon(
+                      Icons.book, // icon แสดงถึงวิชา
+                      color: Colors.blue[600],
+                      size: 30, // ขนาดของ icon
+                    ),
+                    title: Text(
+                      subject['name'] ?? '',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20, // ปรับขนาด
+                        color: Colors.blue[700], // ปรับสี
                       ),
-                    );
-                  },
-                  tileColor: Colors.white,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  title: Text(
-                    subject['name'] ?? '',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
                     ),
-                  ),
-                  subtitle: Text(
-                    'Code: ${subject['code']}, Group: ${subject['group']}, Invite Code: ${subject['inviteCode']}',
-                    style: TextStyle(
-                      color: Colors.grey[800],
+                    subtitle: Text(
+                      'Code: ${subject['code']}, Group: ${subject['group']}, Invite Code: ${subject['inviteCode']}',
+                      style: TextStyle(
+                        color: Colors.grey[700], // ปรับสี
+                        fontSize: 16, // ปรับขนาด
+                      ),
                     ),
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete),
-                    color: Colors.red,
-                    onPressed: () =>
-                        _showDeleteConfirmationDialog(context, doc.id),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      color: Colors.red[600], // ปรับสี
+                      iconSize: 30, // ปรับขนาด
+                      onPressed: () =>
+                          _showDeleteConfirmationDialog(context, doc.id),
+                    ),
                   ),
                 ),
               );

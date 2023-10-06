@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:location/location.dart';
-import 'dart:async'; // นำเข้า Library สำหรับ Timer
 
 class CheckInPage extends StatefulWidget {
   final String userId;
@@ -15,6 +16,7 @@ class CheckInPage extends StatefulWidget {
 }
 
 class _CheckInPageState extends State<CheckInPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String scheduleId =
       DateTime.now().toIso8601String().split('T')[0]; // กำหนดค่าเริ่มต้น
 
@@ -27,7 +29,7 @@ class _CheckInPageState extends State<CheckInPage> {
   LocationData? _locationData;
   bool _isChecking = false;
   Timer? _timer; // สร้างตัวแปร Timer
-
+  late DateTime endDateTime;
   double universityLat = 17.272961;
   double universityLong = 104.131919;
   double allowedDistance = 100.0; // in meters
@@ -88,7 +90,11 @@ class _CheckInPageState extends State<CheckInPage> {
     scheduleId = _selectedDate.toIso8601String().split('T')[0];
   }
 
-  // สร้างฟังก์ชันเพื่อจัดการ Timer และการปิดเช็คอิน
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   Future<void> _manageCheckInClosing(DateTime endDateTime) async {
     final duration = endDateTime.difference(DateTime.now());
     _timer = Timer(duration, () {
@@ -97,14 +103,9 @@ class _CheckInPageState extends State<CheckInPage> {
         setState(() {
           _isChecking = false;
         });
+        _markAbsentStudents(); // ทำการเรียกฟังก์ชันนี้ตอนที่เวลาที่ตั้งไว้สิ้นสุดลง
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel(); // ยกเลิก Timer เมื่อหน้าถูกทำลาย
-    super.dispose();
   }
 
   Future<void> _selectDate() async {
@@ -137,7 +138,7 @@ class _CheckInPageState extends State<CheckInPage> {
 
       if (selectedTime.isBefore(now)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('กรุณาเลือกเวลาที่ยังไม่ผ่านไป')),
+          const SnackBar(content: Text('กรุณาเลือกเวลาที่ยังไม่ผ่านไป')),
         );
         return;
       }
@@ -162,7 +163,7 @@ class _CheckInPageState extends State<CheckInPage> {
 
       if (selectedTime.isBefore(now)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('กรุณาเลือกเวลาที่ยังไม่ผ่านไป')),
+          const SnackBar(content: Text('กรุณาเลือกเวลาที่ยังไม่ผ่านไป')),
         );
         return;
       }
@@ -221,7 +222,6 @@ class _CheckInPageState extends State<CheckInPage> {
     );
 
     await _manageCheckInClosing(endDateTime);
-
     final Map<String, dynamic> data = {
       'startDate': startDateTime,
       'endDate': endDateTime,
@@ -232,23 +232,134 @@ class _CheckInPageState extends State<CheckInPage> {
       'studentsChecked': [],
     };
 
-    await attendanceScheduleDoc
-        .set(data)
-        // ใช้ set แทน add เพื่อ overwrite ถ้ามีข้อมูลอยู่แล้ว
-        .then((_) => print(
-            "Schedule saved successfully!")) // Debugging: Add a print statement here
-        .catchError((error) => print(
-            "Failed to save schedule: $error")); // Debugging: Handle error here
+    await attendanceScheduleDoc.set(data).then((_) async {
+      print("Schedule saved successfully!");
+    }).catchError((error) => print("Failed to save schedule: $error"));
+    // Debugging: Handle error here
 
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Schedule saved!')));
+        .showSnackBar(const SnackBar(content: Text('Schedule saved!')));
+  }
+
+  Future<void> _markAbsentStudents() async {
+    final subjects = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userId)
+        .collection('subjects');
+    final subjectDoc = subjects.doc(widget.docId);
+
+    // ดึงรายชื่อนิสิตทั้งหมด
+    final studentsList = await subjectDoc.get().then((doc) {
+      if (doc.exists) {
+        return List<Map<String, dynamic>>.from(doc['students']);
+      }
+      return [];
+    });
+
+    final studentIds =
+        studentsList.map((student) => student['studentId']).toList();
+
+    return FirebaseFirestore.instance.runTransaction((transaction) async {
+      final scheduleSnapshot = await transaction
+          .get(subjectDoc.collection('attendanceSchedules').doc(scheduleId));
+
+      if (!scheduleSnapshot.exists) {
+        // Handle error: the document doesn't exist.
+        return;
+      }
+
+      final currentCheckedStudents = List<Map<String, dynamic>>.from(
+          scheduleSnapshot.data()?['studentsChecked'] ?? []);
+
+      final absentStudents = studentIds
+          .where((id) => !currentCheckedStudents
+              .any((student) => student['studentId'] == id))
+          .toList();
+
+      for (var absentStudentId in absentStudents) {
+        var studentData = studentsList.firstWhere(
+            (s) => s['studentId'] == absentStudentId,
+            orElse: () => <String, dynamic>{});
+
+        if (!studentData.containsKey('studentId')) continue;
+
+        var studentName = studentData['name'];
+        var studentUid = studentData['uid'];
+
+        // ตรวจสอบว่านิสิตนั้นถูกเพิ่มเข้าไปใน studentsChecked หรือยัง
+        bool isStudentAlreadyChecked = currentCheckedStudents
+            .any((student) => student['studentId'] == absentStudentId);
+
+        // ถ้ายังไม่ถูกเพิ่มเข้าไป จึงทำการเพิ่ม
+        if (!isStudentAlreadyChecked) {
+          final absentStudentData = {
+            'studentId': absentStudentId,
+            'name': studentName,
+            'status': 'absent',
+            'time': Timestamp.now(),
+            'uid': studentUid,
+          };
+
+          currentCheckedStudents.add(absentStudentData);
+          // อัปเดตข้อมูลเข้าฝั่งนิสิต
+          await _updateStudentRecord(absentStudentData, studentUid);
+        }
+      }
+
+      // ทำการอัพเดทข้อมูลลงในฐานข้อมูลโดยใช้ transaction
+      transaction.update(
+          subjectDoc.collection('attendanceSchedules').doc(scheduleId),
+          {'studentsChecked': currentCheckedStudents});
+    });
+  }
+
+  Future<void> _updateStudentRecord(
+      Map<String, dynamic> checkInData, String studentUid) async {
+    final studentSubjectRef = _firestore
+        .collection('users')
+        .doc(studentUid) // ใช้ uid ของนิสิตเป็น document ID
+        .collection('enrolledSubjects')
+        .doc(widget.docId);
+
+    final studentAttendanceScheduleRef = studentSubjectRef
+        .collection('attendanceSchedulesRecords')
+        .doc(DateTime.now().toLocal().toString().split(' ')[0]);
+
+    // ทำการเช็คว่ามี document นี้หรือยัง ถ้ายังก็สร้าง
+    if (!(await studentAttendanceScheduleRef.get()).exists) {
+      await studentAttendanceScheduleRef.set({
+        // เพิ่มข้อมูลเบื้องต้นที่คุณต้องการจะเก็บไว้
+      });
+    }
+
+    // อ่านข้อมูลที่มีอยู่
+    DocumentSnapshot snapshot = await studentAttendanceScheduleRef.get();
+    List existingData;
+    if (snapshot.exists && snapshot.data() != null) {
+      existingData =
+          (snapshot.data() as Map<String, dynamic>)['studentsCheckedRecords'] ??
+              [];
+    } else {
+      existingData = [];
+    }
+
+    // ตรวจสอบว่าข้อมูลนั้นยังไม่มีอยู่
+    bool alreadyExists = existingData
+        .any((data) => data['studentId'] == checkInData['studentId']);
+
+    // ถ้าไม่มี, ค่อยทำการบันทึกข้อมูล
+    if (!alreadyExists) {
+      await studentAttendanceScheduleRef.update({
+        'studentsCheckedRecords': FieldValue.arrayUnion([checkInData])
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Check-In Page'),
+        title: const Text('Check-In Page'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -261,7 +372,7 @@ class _CheckInPageState extends State<CheckInPage> {
                 labelText: 'Date',
                 suffixIcon: IconButton(
                   onPressed: _selectDate,
-                  icon: Icon(Icons.calendar_today),
+                  icon: const Icon(Icons.calendar_today),
                 ),
               ),
             ),
@@ -272,7 +383,7 @@ class _CheckInPageState extends State<CheckInPage> {
                 labelText: 'Start Time',
                 suffixIcon: IconButton(
                   onPressed: _selectStartTime,
-                  icon: Icon(Icons.access_time),
+                  icon: const Icon(Icons.access_time),
                 ),
               ),
             ),
@@ -283,23 +394,24 @@ class _CheckInPageState extends State<CheckInPage> {
                 labelText: 'End Time',
                 suffixIcon: IconButton(
                   onPressed: _selectEndTime,
-                  icon: Icon(Icons.access_time),
+                  icon: const Icon(Icons.access_time),
                 ),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {
                 await _getLocation();
                 if (isWithinUniversity(_locationData)) {
                   // User is within the university, allow check-in
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('You are within the University!')),
+                    const SnackBar(
+                        content: Text('You are within the University!')),
                   );
                 } else {
                   // User is not within the university, disallow check-in
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    const SnackBar(
                         content: Text('You are not within the University!')),
                   );
                 }
@@ -308,18 +420,16 @@ class _CheckInPageState extends State<CheckInPage> {
                 print(
                     'Is within university: ${isWithinUniversity(_locationData)}');
               },
-              child: Text('Get Location '),
+              child: const Text('Get Location '),
             ),
-            SizedBox(height: 16),
-            SwitchListTile(
-              title: Text(_isChecking ? 'เปิดเช็คอิน' : 'ปิดเช็คอิน'),
-              value: _isChecking,
-              onChanged: (bool value) async {
-                print("Switch Toggled");
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () async {
+                print("Button Pressed");
                 print("Is Settings Ready: ${isSettingsReady()}");
                 print("Is Within Time Range: ${isWithinTimeRange()}");
                 setState(() {
-                  _isChecking = value;
+                  _isChecking = !_isChecking;
                   if (_isChecking) {
                     _manageCheckInClosing(DateTime(
                       _selectedDate.year,
@@ -338,8 +448,13 @@ class _CheckInPageState extends State<CheckInPage> {
                   }
                 });
               },
+              icon: Icon(Icons.check_circle),
+              label: Text(_isChecking ? 'เปิดเช็คอิน' : 'ปิดเช็คอิน'),
+              style: ElevatedButton.styleFrom(
+                primary: _isChecking ? Colors.green : Colors.red,
+              ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('users')
@@ -351,11 +466,11 @@ class _CheckInPageState extends State<CheckInPage> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting)
-                  return CircularProgressIndicator();
+                  return const CircularProgressIndicator();
 
                 if (!snapshot.hasData || snapshot.data!.data() == null) {
                   print('No attendance data available for $scheduleId.');
-                  return Text('ยังไม่มีข้อมูลการเช็คชื่อ');
+                  return const Text('ยังไม่มีข้อมูลการเช็คชื่อ');
                 }
                 final data = snapshot.data!.data() as Map<String, dynamic>;
 
@@ -363,7 +478,7 @@ class _CheckInPageState extends State<CheckInPage> {
                     (data['studentsChecked'] as List<dynamic>? ?? []);
 
                 if (studentsChecked.isEmpty)
-                  return Text('ยังไม่มีนิสิตที่เช็คชื่อ');
+                  return const Text('ยังไม่มีนิสิตที่เช็คชื่อ');
 
                 final attendedCount = studentsChecked
                     .where((student) => student['status'] == 'attended')

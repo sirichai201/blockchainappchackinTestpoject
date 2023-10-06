@@ -21,6 +21,8 @@ class _HistoryState extends State<History> {
   late List<String> uniqueSubjects;
   final subjectController = TextEditingController();
   List<Map<String, dynamic>> attendanceList = []; // For storing attendance data
+  String? statusMessage;
+
   @override
   void initState() {
     super.initState();
@@ -67,10 +69,31 @@ class _HistoryState extends State<History> {
     }
   }
 
-  void loadAttendanceSchedules(String selectedSubjectDocId) async {
-    String formattedSelectedDate = DateFormat('yyyy-MM-dd').format(
-        selectedDate); // Change the format to match your document ID format.
+  void loadAttendanceSchedules() async {
+    String formattedSelectedDate =
+        DateFormat('yyyy-MM-dd').format(selectedDate);
 
+    // ขั้นตอนที่ 1: ดึง document ของวิชา
+    final subjectQuery = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userDocId)
+        .collection('subjects')
+        .where('name', isEqualTo: selectedSubject)
+        .where('term', isEqualTo: selectedTerm);
+
+    final subjectQuerySnapshot = await subjectQuery.get();
+
+    if (subjectQuerySnapshot.docs.isEmpty) {
+      setState(() {
+        statusMessage = 'ไม่มีเทอมที่เลือก';
+        attendanceList = [];
+      });
+      return;
+    }
+
+    final selectedSubjectDocId = subjectQuerySnapshot.docs.first.id;
+
+    // ขั้นตอนที่ 2: ดึงข้อมูลการเข้าเรียน
     final attendanceDocRef = FirebaseFirestore.instance
         .collection('users')
         .doc(userDocId)
@@ -105,7 +128,7 @@ class _HistoryState extends State<History> {
           'name': name,
         };
       }).toList();
-
+      statusMessage = null;
       print('Loaded ${attendanceList.length} attendances');
       print('Attendance List: $attendanceList');
     });
@@ -149,6 +172,10 @@ class _HistoryState extends State<History> {
                       onChanged: (String? newValue) {
                         setState(() {
                           selectedYear = newValue ?? '';
+
+                          // เมื่อเลือกปี ให้รับเดือนและวันจาก selectedDate และปีจาก selectedYear
+                          selectedDate = DateTime(int.parse(selectedYear),
+                              selectedDate.month, selectedDate.day);
                         });
                       },
                     ),
@@ -222,17 +249,12 @@ class _HistoryState extends State<History> {
                     ElevatedButton(
                       onPressed: () {
                         if (subjectsList.isNotEmpty) {
-                          final selectedSubjectMap = subjectsList.firstWhere(
-                              (subjectMap) =>
-                                  subjectMap['name'] == selectedSubject,
-                              orElse: () => subjectsList[0]);
-                          final selectedSubjectDocId =
-                              selectedSubjectMap['docId'];
-                          loadAttendanceSchedules(selectedSubjectDocId);
+                          loadAttendanceSchedules();
                         }
                       },
                       child: const Text('ยืนยัน'),
                     ),
+
                     const SizedBox(height: 20),
                     // Count summaries
                     Text(
@@ -243,50 +265,54 @@ class _HistoryState extends State<History> {
                         'นิสิตลา: ${attendanceList.where((item) => item['status'] == 'leave').length} คน'),
                     const SizedBox(height: 20),
                     ...[
-                      if (attendanceList.isEmpty)
+                      if (statusMessage != null) ...[
+                        Center(child: Text(statusMessage!))
+                      ] else if (attendanceList.isEmpty) ...[
                         Center(
                             child: Text(
-                                'ไม่มีข้อมูลนิสิตในวันที่ ${selectedDate.toLocal().toString().split(' ')[0]}')),
-                      ...attendanceList.map((attendance) {
-                        print(
-                            'Building Card for ${attendance['studentId'] ?? 'unknown student'}');
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                        'ชื่อ: ${attendance['name'] ?? 'ไม่มีข้อมูล'}'),
-                                    Text(
-                                        'รหัสนิสิต: ${attendance['studentId'] ?? 'ไม่มีข้อมูล'}'),
-                                  ],
-                                ),
-                                const SizedBox(height: 8.0),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                        'สถานะ: ${attendance['status'] ?? 'ไม่มีข้อมูล'}'),
-                                  ],
-                                ),
-                                const SizedBox(
-                                  height: 8.0,
-                                  width: 20,
-                                ),
-                                Text(
-                                    'เวลา: ${_formatTimestamp(attendance['time'] as Timestamp)}'),
-                              ],
+                                'ไม่มีข้อมูลนิสิตในวันที่ ${selectedDate.toLocal().toString().split(' ')[0]}'))
+                      ] else ...[
+                        ...attendanceList.map((attendance) {
+                          print(
+                              'Building Card for ${attendance['studentId'] ?? 'unknown student'}');
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                          'ชื่อ: ${attendance['name'] ?? 'ไม่มีข้อมูล'}'),
+                                      Text(
+                                          'รหัสนิสิต: ${attendance['studentId'] ?? 'ไม่มีข้อมูล'}'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8.0),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                          'สถานะ: ${attendance['status'] ?? 'ไม่มีข้อมูล'}'),
+                                    ],
+                                  ),
+                                  const SizedBox(
+                                    height: 8.0,
+                                    width: 20,
+                                  ),
+                                  Text(
+                                      'เวลา: ${_formatTimestamp(attendance['time'] as Timestamp)}'),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ],
                     ],
                   ],
                 ),

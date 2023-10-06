@@ -146,38 +146,58 @@ class _UserNisitState extends State<UserNisit> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       elevation: 8,
+      color: Color.fromARGB(255, 248, 247, 247),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
+        side: BorderSide(
+          color: Color.fromARGB(255, 124, 124, 123),
+          width: 1.5,
+        ),
       ),
-      child: ListTile(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SubjectDetailNisit(
-                userId: currentUserUid,
-                docId: docId,
-                subjectName: subject['name'], // ส่งชื่อวิชา
-                subjectCode: subject['code'], // ส่งรหัสวิชา
-                subjectGroup: subject['group'], // ส่งหมู่เรียน
-                uidTeacher: subject['uidTeacher'],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: ListTile(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SubjectDetailNisit(
+                  userId: currentUserUid,
+                  docId: docId,
+                  subjectName: subject['name'], // ส่งชื่อวิชา
+                  subjectCode: subject['code'], // ส่งรหัสวิชา
+                  subjectGroup: subject['group'], // ส่งหมู่เรียน
+                  uidTeacher: subject['uidTeacher'],
+                ),
               ),
+            );
+          },
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          leading: Icon(
+            Icons.book, // icon แสดงถึงวิชา
+            color: Colors.blue[600],
+            size: 30, // ขนาดของ icon
+          ),
+          title: Text(
+            subject['name'] ?? '',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20, // ปรับขนาด
+              color: Colors.blue[700], // ปรับสี
             ),
-          );
-        },
-        title: Text(
-          subject['name'] ?? '',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        subtitle: Text(
-          'Code: ${subject['code']}, Group: ${subject['group']},',
-          style: TextStyle(color: Colors.grey[800]),
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete),
-          color: Colors.red,
-          onPressed: () =>
-              _showDeleteConfirmationDialog(context, docId, subject['name']),
+          ),
+          subtitle: Text(
+            'Code: ${subject['code']}, Group: ${subject['group']},',
+            style: TextStyle(color: Colors.grey[800]),
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.delete),
+            color: Colors.red[600], // ปรับสี
+            iconSize: 30, // ปรับขนาด
+            onPressed: () =>
+                _showDeleteConfirmationDialog(context, docId, subject['name']),
+          ),
         ),
       ),
     );
