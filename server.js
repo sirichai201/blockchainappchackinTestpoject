@@ -171,6 +171,57 @@ app.get('/getRewards', async (_, res) => {
   }
 });
 
+//แก้ไข้ข้อมูลรายการของรางวัล
+app.post('/updateReward', async (req, res) => {
+  try {
+      console.log('Received data for updating reward:', req.body);
+      const { rewardIndex, newName, newCoinCost, newQuantity } = req.body;
+
+      const tx = await contract.methods.updateReward(rewardIndex, newName, newCoinCost, newQuantity).send({ from: senderAddress });
+      
+      if (tx.status === true) {
+          res.json({
+              status: 'success',
+              message: 'Reward updated successfully.',
+              data: {
+                  name: newName,
+                  coinCost: newCoinCost,
+                  quantity: newQuantity
+              }
+          });
+      } else {
+          throw new Error('Failed to update reward in smart contract.');
+      }
+  } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Internal Server Error.');
+  }
+});
+
+//ลบรายการของรายวัล
+app.post('/deleteReward', async (req, res) => {
+  try {
+      console.log('Received request to delete reward:', req.body);
+      const { rewardIndex } = req.body;
+
+      const tx = await contract.methods.deleteReward(rewardIndex).send({ from: senderAddress });
+      
+      if (tx.status === true) {
+          res.json({
+              status: 'success',
+              message: 'Reward deleted successfully.'
+          });
+      } else {
+          throw new Error('Failed to delete reward in smart contract.');
+      }
+  } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Internal Server Error.');
+  }
+});
+
+
+
 // แลกของรางวัล
 app.post('/exchangeReward', async (req, res) => {
   try {
@@ -197,6 +248,10 @@ app.get('/getRedemptionHistory/:userAddress', async (req, res) => {
       console.error('Error:', error);
       res.status(500).send('Internal Server Error.');
   }
+
+
+
+
 });
 
 

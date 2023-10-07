@@ -108,4 +108,22 @@ contract MyContract {
     function getRedemptionHistory(address studentAddress) public view returns (Redemption[] memory) {
         return redemptionHistory[studentAddress];
     }
+
+    //แก้ไขข้อมูลรายการของรางวัล
+    function updateReward(uint256 rewardIndex, string memory newName, uint256 newCoinCost, uint256 newQuantity) public onlyOwner {
+    require(rewardIndex < rewards.length, "Invalid reward index");
+    rewards[rewardIndex].name = newName;
+    rewards[rewardIndex].coinCost = newCoinCost;
+    rewards[rewardIndex].quantity = newQuantity;
+}
+
+//ลบรายการของรางวัล
+function deleteReward(uint256 rewardIndex) public onlyOwner {
+    require(rewardIndex < rewards.length, "Invalid reward index");
+    if (rewardIndex != rewards.length-1) {
+        rewards[rewardIndex] = rewards[rewards.length-1];
+    }
+    rewards.pop();
+}
+
 }
