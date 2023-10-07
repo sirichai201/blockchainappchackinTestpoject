@@ -1,143 +1,29 @@
+
+require('dotenv').config();
+
 const express = require('express');
 const admin = require('firebase-admin');
 const Web3 = require('web3');
-const cors = require('cors');
+
 const app = express();
 const bodyParser = require('body-parser');
-require('dotenv').config();
+
 app.use(bodyParser.json()); 
-app.use(cors());
+
 app.use(express.json());
-const web3 = new Web3('http://10.0.2.2:3000');
+const web3 = new Web3('http://127.0.0.1:7545');
+
+const cors = require('cors');
+app.use(cors());
 
 
 
-const contractABI = [
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "student",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "Rewarded",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "student",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "SpentCoin",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "balances",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "deposit",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getBalance",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "spendCoin",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "student",
-        "type": "address"
-      }
-    ],
-    "name": "rewardStudent",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-];
-const contractAddress = '0xb97F588B8D7b827061771528976Ed467676d303d';
+const privateKey = process.env.PRIVATE_KEY;
+const { abi } = require('./build/contracts/MyContract.json');
 
-const contract = new web3.eth.Contract(contractABI, contractAddress);
+const senderAddress = process.env.SENDER_ADDRESS;
+const contractAddress = process.env.CONTRACT_ADDRESS;
+const contract = new web3.eth.Contract(abi, contractAddress);
 
 const serviceAccount = require('./projectblockchainapp-9defb-firebase-adminsdk-2doub-bab55a8ad3.json');
 
@@ -165,8 +51,7 @@ app.post('/sendEther', async (req, res) => {
     }
     console.log(`เริ่มต้นการส่ง Ether ไปยัง ${receiverAddress}...`);
 
-    const senderAddress = '0xb97F588B8D7b827061771528976Ed467676d303d';
-    const privateKey = process.env.PRIVATE_KEY;
+  
     const amountInEther = '0.05';
     const amountInWei = web3.utils.toWei(amountInEther, 'ether');
 
@@ -242,29 +127,79 @@ app.get('/getBalance/:address', async (req, res) => {
   }
 });
 
-app.post('/redeemReward', async (req, res) => {
+// สร้างของรางวัล
+app.post('/addReward', async (req, res) => {
+  
   try {
-    const { userAddress, cost } = req.body;
-    
-    // ตรวจสอบข้อมูลที่ต้องการจากคำขอ
-    if (!userAddress || !cost) {
-      return res.status(400).send('Missing required parameters.');
-    }
+    // แสดงข้อมูลที่ส่งมาจาก Flutter
+    console.log('Received data from Flutter:', req.body);
 
-    // เรียกใช้ฟังก์ชัน redeemReward ในสัญญาอัจฉริยะ
-    const tx = await contract.methods.redeemReward(cost).send({ from: userAddress });
+    const { name, coinCost, quantity } = req.body;
 
-    // ตรวจสอบสถานะของธุรกรรม
+    const tx = await contract.methods.addReward(name, coinCost, quantity).send({ from: senderAddress });
+
     if (tx.status === true) {
-      res.status(200).send('Reward redeemed successfully.');
+        // ส่ง response กลับไปยัง Flutter ในรูปแบบ JSON
+        res.json({
+            status: 'success',
+            message: 'Reward added successfully.',
+            data: {
+                name: name,
+                coinCost: coinCost,
+                quantity: quantity
+            }
+        });
     } else {
-      throw new Error('Failed to redeem reward in smart contract.');
+        throw new Error('Failed to add reward in smart contract.');
     }
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Internal Server Error.');
   }
 });
+
+
+
+// ดูรายการของรางวัล
+app.get('/getRewards', async (_, res) => {
+  try {
+      const rewardsList = await contract.methods.getRewards().call();
+      res.json(rewardsList);
+  } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Internal Server Error.');
+  }
+});
+
+// แลกของรางวัล
+app.post('/exchangeReward', async (req, res) => {
+  try {
+      const { userAddress, rewardIndex } = req.body;
+      const tx = await contract.methods.redeemReward(rewardIndex).send({ from: userAddress });
+      if (tx.status === true) {
+          res.status(200).send('Reward exchanged successfully.');
+      } else {
+          throw new Error('Failed to exchange reward in smart contract.');
+      }
+  } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Internal Server Error.');
+  }
+});
+
+// ดูประวัติการแลก
+app.get('/getRedemptionHistory/:userAddress', async (req, res) => {
+  try {
+      const userAddress = req.params.userAddress;
+      const history = await contract.methods.getRedemptionHistory(userAddress).call();
+      res.json(history);
+  } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Internal Server Error.');
+  }
+});
+
+
 
 
 

@@ -3,19 +3,17 @@ pragma solidity ^0.8.4;
 
 contract MyContract {
     
-    // ยอดเงิน (ควอยน์) ของนักศึกษาแต่ละคน
+    // ยอดเงินของแต่ละนิสิต
     mapping(address => uint256) public balances;
-
     // ที่อยู่ของเจ้าของสัญญา
     address public owner;
 
-    // กำหนดเหตุการณ์เมื่อนักศึกษาใช้ควอยน์
+    // เหตุการณ์ที่เกิดขึ้น
     event SpentCoin(address indexed student, uint256 amount);
-
-    // กำหนดเหตุการณ์เมื่อนักศึกษาได้รับควอยน์รางวัล
     event Rewarded(address indexed student, uint256 amount);
+    event Redeemed(address indexed student, string rewardName, uint256 rewardCost, uint256 timestamp);
 
-    // ฟังก์ชันสร้างเมื่อสัญญาถูกสร้าง
+    // ฟังก์ชันที่ถูกเรียกเมื่อสัญญานี้ถูกสร้าง
     constructor() {
         owner = msg.sender;
     }
@@ -27,57 +25,87 @@ contract MyContract {
     }
 
     // ฟังก์ชันสำหรับฝากเงินเข้าสัญญา
-    function deposit() public payable onlyOwner {}
+    function deposit() public payable onlyOwner {
+        require(msg.value > 0, "Must send some ether");
+    }
 
-    // ฟังก์ชันสำหรับตรวจสอบยอดควอยน์ของนักศึกษา
+    // ดึงยอดเงินของนิสิต
     function getBalance() public view returns (uint256) {
         return balances[msg.sender];
     }
 
-    // ฟังก์ชันให้นักศึกษาใช้ควอยน์
-    function spendCoin(uint256 amount) public {
-        require(balances[msg.sender] >= amount, "Insufficient balance");
-        balances[msg.sender] -= amount;
-        emit SpentCoin(msg.sender, amount);
-    }
-
-    // ฟังก์ชันให้ควอยน์รางวัลนักศึกษาที่เช็คชื่อ
+    // ให้รางวัลแก่นิสิต
     function rewardStudent(address student) public onlyOwner {
-        // จำนวนเงินที่ต้องการโอน
         uint256 rewardAmountEther = 0.05 ether;
-
-        // ตรวจสอบว่าสัญญามีเงินเพียงพอที่จะส่งหรือไม่
         require(address(this).balance >= rewardAmountEther, "Contract does not have enough ether to reward");
-
-        // โอน ether ไปยังที่อยู่ของนักเรียน
         payable(student).transfer(rewardAmountEther);
-    
-        // เพิ่มยอดเหรียญใน balances
         balances[student] += rewardAmountEther;
-
-        // ส่งอีเวนท์แจ้งว่านักศึกษาได้รับควอยน์รางวัล
         emit Rewarded(student, rewardAmountEther);
     }
 
+    // ข้อมูลรางวัล
     struct Reward {
-    string name;
-    string imageUrl;
-    uint256 coinCost;
-    uint256 quantity;
-    address rewardAddress; // เพิ่มฟิลด์นี้เพื่อเก็บ address ของรางวัล
-}
+        string name;
+        
+        uint256 coinCost;
+        uint256 quantity;
+        address rewardAddress;
+    }
+
+    // รายการของรางวัล
     Reward[] public rewards;
 
-    function addReward(string memory _name, string memory _imageUrl, uint256 _coinCost, uint256 _quantity) public onlyOwner {
-    Reward memory newReward = Reward({
-        name: _name,
-        imageUrl: _imageUrl,
-        coinCost: _coinCost,
-        quantity: _quantity,
-        rewardAddress: owner // กำหนดให้ address ของรางวัลเป็นเดียวกันกับ owner ของ contract
-    });
-    rewards.push(newReward);
-}
+    // เพิ่มรางวัล
+    function addReward(string memory _name,  uint256 _coinCost, uint256 _quantity) public onlyOwner {
+        require(_coinCost > 0, "Coin cost should be more than 0");
+        require(_quantity > 0, "Quantity should be more than 0");
+        Reward memory newReward = Reward({
+            name: _name,
+            
+            coinCost: _coinCost,
+            quantity: _quantity,
+            rewardAddress: owner
+        });
+        rewards.push(newReward);
+    }
 
-   
+    // ดึงรายการรางวัล
+    function getRewards() public view returns (Reward[] memory) {
+        return rewards;
+    }
+
+    // นิสิตแลกรางวัล
+    function redeemReward(uint256 rewardIndex) public {
+        require(rewardIndex < rewards.length, "Invalid reward index");
+        Reward memory chosenReward = rewards[rewardIndex];
+        require(balances[msg.sender] >= chosenReward.coinCost, "Not enough coins to redeem the reward");
+        require(chosenReward.quantity > 0, "Reward out of stock");
+        balances[msg.sender] -= chosenReward.coinCost;
+        balances[chosenReward.rewardAddress] += chosenReward.coinCost;
+        rewards[rewardIndex].quantity--;
+        emit Redeemed(msg.sender, chosenReward.name, chosenReward.coinCost, block.timestamp);
+
+        // บันทึกประวัติการแลกของรางวัล
+        Redemption memory newRedemption = Redemption({
+            rewardName: chosenReward.name,
+            rewardCost: chosenReward.coinCost,
+            timestamp: block.timestamp
+        });
+        redemptionHistory[msg.sender].push(newRedemption);
+    }
+
+    // ข้อมูลการแลกของรางวัล
+    struct Redemption {
+        string rewardName;
+        uint256 rewardCost;
+        uint256 timestamp;
+    }
+
+    // ประวัติการแลกรางวัล
+    mapping(address => Redemption[]) public redemptionHistory;
+
+    // ดึงประวัติการแลกรางวัล
+    function getRedemptionHistory(address studentAddress) public view returns (Redemption[] memory) {
+        return redemptionHistory[studentAddress];
+    }
 }

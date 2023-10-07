@@ -1,10 +1,13 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:io';
 import 'package:blockchainappchackin/screen_addmin/user_admin.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CreateRewards extends StatefulWidget {
   @override
@@ -16,12 +19,14 @@ class _CreateRewardsState extends State<CreateRewards> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final ImagePicker _picker = ImagePicker();
-
+  final client = http.Client();
   String? name;
-  double? balanceInEther;  // ใช้ balanceInEther แทนตัวแปร coin
+  double? balanceInEther; // ใช้ balanceInEther แทนตัวแปร coin
   int? quantity;
   File? _imageFile;
-
+  BigInt toWei(double etherValue) {
+    return BigInt.from(etherValue * 1e18);
+  }
 
   Future<void> pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -29,6 +34,83 @@ class _CreateRewardsState extends State<CreateRewards> {
       setState(() {
         _imageFile = File(pickedFile.path);
       });
+    }
+  }
+
+  Future<void> addRewardToServer() async {
+    final url = 'http://10.0.2.2:3000/addReward';
+    final response = await client.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'name': name,
+        'coinCost': toWei(balanceInEther!).toString(),
+        'quantity': quantity.toString(),
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+      if (responseBody['status'] == 'success') {
+        // แจ้งเตือนเมื่อสำเร็จ
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Success'),
+              content: Text(responseBody['message']),
+              actions: <Widget>[
+                ElevatedButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      } else {
+        // แจ้งเตือนเมื่อเกิดปัญหา
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Error'),
+              content: Text('Failed to add reward in smart contract.'),
+              actions: <Widget>[
+                ElevatedButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } else {
+      // แจ้งเตือนเมื่อการเชื่อมต่อกับเซิร์ฟเวอร์มีปัญหา
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Error'),
+            content: Text('Failed to connect to server.'),
+            actions: <Widget>[
+              ElevatedButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 
@@ -53,6 +135,11 @@ class _CreateRewardsState extends State<CreateRewards> {
       Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => UserAdmin()));
     }
+  }
+
+  Future<void> addRewardAndSendToServer() async {
+    await addReward();
+    await addRewardToServer();
   }
 
   @override
@@ -81,16 +168,19 @@ class _CreateRewardsState extends State<CreateRewards> {
               ),
               TextFormField(
                 decoration: InputDecoration(labelText: 'ชื่อของรางวัล'),
-                validator: (value) => value?.isEmpty == true ? 'กรุณาใส่ชื่อของรางวัล' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'กรุณาใส่ชื่อของรางวัล' : null,
                 onSaved: (value) => name = value,
               ),
               TextFormField(
                 decoration: InputDecoration(labelText: 'จำนวนเหรียญที่ต้องการ'),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (value) => value == null || double.tryParse(value) == null
-                    ? 'กรุณาใส่จำนวนเหรียญในรูปแบบที่ถูกต้อง'
-                    : null,
-                onSaved: (value) => balanceInEther = double.tryParse(value ?? '0'),
+                validator: (value) =>
+                    value == null || double.tryParse(value) == null
+                        ? 'กรุณาใส่จำนวนเหรียญในรูปแบบที่ถูกต้อง'
+                        : null,
+                onSaved: (value) =>
+                    balanceInEther = double.tryParse(value ?? '0'),
               ),
               TextFormField(
                 decoration: InputDecoration(labelText: 'จำนวนของรางวัล'),
@@ -103,7 +193,7 @@ class _CreateRewardsState extends State<CreateRewards> {
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: addReward,
+                onPressed: addRewardAndSendToServer,
                 child: Text('ยืนยัน'),
               ),
             ],
