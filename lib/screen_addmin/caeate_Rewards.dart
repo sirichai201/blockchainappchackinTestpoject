@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
+
 class CreateRewards extends StatefulWidget {
   @override
   _CreateRewardsState createState() => _CreateRewardsState();
@@ -17,9 +18,10 @@ class _CreateRewardsState extends State<CreateRewards> {
   final ImagePicker _picker = ImagePicker();
 
   String? name;
-  double? coin;
+  double? balanceInEther;  // ใช้ balanceInEther แทนตัวแปร coin
   int? quantity;
   File? _imageFile;
+
 
   Future<void> pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -44,7 +46,7 @@ class _CreateRewardsState extends State<CreateRewards> {
       await _firestore.collection('rewards').add({
         'name': name,
         'imageUrl': imageUrl,
-        'coin': coin,
+        'coin': balanceInEther,
         'quantity': quantity,
       });
 
@@ -88,7 +90,7 @@ class _CreateRewardsState extends State<CreateRewards> {
                 validator: (value) => value == null || double.tryParse(value) == null
                     ? 'กรุณาใส่จำนวนเหรียญในรูปแบบที่ถูกต้อง'
                     : null,
-                onSaved: (value) => coin = double.tryParse(value ?? '0'),
+                onSaved: (value) => balanceInEther = double.tryParse(value ?? '0'),
               ),
               TextFormField(
                 decoration: InputDecoration(labelText: 'จำนวนของรางวัล'),

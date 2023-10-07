@@ -1,91 +1,111 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class RewardDetailPage extends StatefulWidget {
   final DocumentSnapshot reward;
-  final double userCoins;
-  final double balanceInEther;
+  final double balanceInEther; // เพิ่ม balanceInEther เพื่อใช้ในการคำนวณ
 
-  RewardDetailPage({required this.reward, required this.userCoins, required this.balanceInEther}); // แก้ไข constructor ให้รองรับ
+  RewardDetailPage({required this.reward, required this.balanceInEther}); // รับพารามิเตอร์ balanceInEther
 
   @override
   _RewardDetailPageState createState() => _RewardDetailPageState();
 }
 
+class EthereumBalance with ChangeNotifier {
+  double? _balance = 0.0;
+
+  double get balance => _balance ?? 0.0;
+
+  set balance(double newBalance) {
+    _balance = newBalance;
+    notifyListeners();
+  }
+
+  void updateBalance(double newBalance) {
+    _balance = newBalance;
+    notifyListeners();
+  }
+}
+
 class _RewardDetailPageState extends State<RewardDetailPage> {
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  Future<bool> redeemRewardFromServer(String userAddress, double cost) async {
+    final url = 'http://127.0.0.1:7545/redeemReward';
+    final response = await http.post(
+      Uri.parse(url),
+      body: jsonEncode({
+        'userAddress': userAddress,
+        'cost': cost,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    );
+
+    return response.statusCode == 200;
   }
 
-  void _redeemReward(BuildContext context) async {
-    final user = FirebaseAuth.instance.currentUser;
-    final data = widget.reward.data() as Map<String, dynamic>;
-    final coin = (data['coin'] as num?)?.toDouble() ?? 0.0;
+  void _redeemReward(double balance) async {
+  final user = FirebaseAuth.instance.currentUser;
+  final data = widget.reward.data() as Map<String, dynamic>;
+  final coin = (data['coin'] as num?)?.toDouble() ?? 0.0;
 
-    if (widget.userCoins < coin) {
-      _showSnackBar(context, 'เหรียญไม่เพียงพอสำหรับการแลก');
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        final rewardRef = FirebaseFirestore.instance.collection('rewards').doc(widget.reward.id);
-        final userRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
-
-        final currentReward = await transaction.get(rewardRef);
-        final currentUser = await transaction.get(userRef);
-
-        int currentQuantity = currentReward['quantity'] ?? 0;
-        double currentUserCoins = (currentUser['coins'] as num?)?.toDouble() ?? 0.0;
-
-        if (currentQuantity <= 0) {
-          _showSnackBar(context, 'ของรางวัลหมดแล้ว');
-          return;
-        }
-
-        transaction.update(rewardRef, {'quantity': currentQuantity - 1});
-        transaction.update(userRef, {'coins': currentUserCoins - coin});
-
-        _showSnackBar(context, 'ทำการแลกเรียบร้อย');
-        Navigator.pop(context);
-      });
-    } catch (e) {
-      print('Error redeeming reward: $e');
-      _showSnackBar(context, 'เกิดข้อผิดพลาด: $e');
-    }
+  if (balance < coin) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('เหรียญ Ethereum ไม่เพียงพอสำหรับการแลก')));
+    return;
   }
 
-  @override
+  final success = await redeemRewardFromServer(user!.uid, coin);
+  if (success) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('แลกของรางวัลสำเร็จ')));
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('แลกของรางวัลล้มเหลว')));
+  }
+}
+
+
+    @override
   Widget build(BuildContext context) {
     final data = widget.reward.data() as Map<String, dynamic>;
     final name = data['name'] as String? ?? 'Unknown';
     final imageUrl = data['imageUrl'] as String? ?? '';
     final coin = (data['coin'] as num?)?.toDouble() ?? 0.0;
     final remainingQuantity = data['quantity'] as int? ?? 0;
+    final currentBalance = widget.balanceInEther;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('รายละเอียดของรางวัล'),
+   return Scaffold(
+    appBar: AppBar(
+      title: Text('รายละเอียดของรางวัล'),
+    ),
+    body: Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ยอดเหรียญ Ethereum ของคุณ: ${currentBalance?.toStringAsFixed(2) ?? '0.00'} ETH'),
+          SizedBox(height: 10.0),
+          if (imageUrl.isNotEmpty) Image.network(imageUrl),
+          Text('Name: $name'),
+          Text('Cost: ${coin.toStringAsFixed(2)} coins'),
+          Text('Remaining Quantity: $remainingQuantity'),
+          ElevatedButton(
+            onPressed: () {
+              if (currentBalance >= coin) {
+                _redeemReward(currentBalance); // ส่งค่า currentBalance เข้าไปใน _redeemReward
+              } else {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text('เหรียญ Ethereum ไม่เพียงพอสำหรับการแลก')));
+              }
+            },
+            child: Text('ยืนยันการแลกของรางวัล'),
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ยอดเหรียญของคุณ: ${widget.userCoins.toStringAsFixed(2)} เหรียญ'),
-            SizedBox(height: 10.0),
-            if (imageUrl.isNotEmpty) Image.network(imageUrl),
-            Text('Name: $name'),
-            Text('Cost: ${coin.toStringAsFixed(2)} coins'),
-            Text('Remaining Quantity: $remainingQuantity'),
-            ElevatedButton(
-              onPressed: () => _redeemReward(context),
-              child: Text('ยืนยันการแลกของรางวัล'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -8,7 +8,7 @@ require('dotenv').config();
 app.use(bodyParser.json()); 
 app.use(cors());
 app.use(express.json());
-const web3 = new Web3('http://127.0.0.1:7545');
+const web3 = new Web3('http://10.0.2.2:3000');
 
 
 
@@ -241,6 +241,33 @@ app.get('/getBalance/:address', async (req, res) => {
       res.status(500).send(error.toString());
   }
 });
+
+app.post('/redeemReward', async (req, res) => {
+  try {
+    const { userAddress, cost } = req.body;
+    
+    // ตรวจสอบข้อมูลที่ต้องการจากคำขอ
+    if (!userAddress || !cost) {
+      return res.status(400).send('Missing required parameters.');
+    }
+
+    // เรียกใช้ฟังก์ชัน redeemReward ในสัญญาอัจฉริยะ
+    const tx = await contract.methods.redeemReward(cost).send({ from: userAddress });
+
+    // ตรวจสอบสถานะของธุรกรรม
+    if (tx.status === true) {
+      res.status(200).send('Reward redeemed successfully.');
+    } else {
+      throw new Error('Failed to redeem reward in smart contract.');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Internal Server Error.');
+  }
+});
+
+
+
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`เซิร์ฟเวอร์กำลังทำงานที่พอร์ต ${PORT}`));

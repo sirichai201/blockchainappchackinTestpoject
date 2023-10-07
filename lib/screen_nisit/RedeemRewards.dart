@@ -6,12 +6,10 @@ import 'RewardDetailPage.dart';
 import 'recordRedeemHistory.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
-
+import 'package:provider/provider.dart';
 
 class RedeemRewards extends StatefulWidget {
   final String uid;
-   
 
   RedeemRewards({required this.uid});
 
@@ -20,154 +18,116 @@ class RedeemRewards extends StatefulWidget {
 }
 
 class _RedeemRewardsState extends State<RedeemRewards> {
-   late final String currentUserUid;
+ late String currentUserUid;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late User? currentUser;
-  // double? userCoins; // <-- Use double for coins
- double? balanceInEther;
+
   @override
-void initState() {
-  super.initState();
-  getCurrentUser().then((_) => _printUserEthereumAddress());
-}
+  void initState() {
+    super.initState();
+    currentUserUid = widget.uid;
+    getCurrentUser().then((_) => _printUserEthereumAddress());
+  }
 
-
-
-
-
- Future<void> getCurrentUser() async {
-    print('Fetching current user...');
-
+  Future<void> getCurrentUser() async {
     currentUser = FirebaseAuth.instance.currentUser;
   }
 
- Future<void> _printUserEthereumAddress() async {
-  await getCurrentUser();
-  if (currentUser?.uid != null) {
-    String? ethAddress = await fetchUserEthereumAddress(currentUser!.uid);
-    if (ethAddress != null) {
-      print('Ethereum Address for user ${currentUser?.uid} is $ethAddress');
-      setState(() {
-        currentUserUid = ethAddress;
-      });
-    } else {
-      print('Failed to fetch Ethereum Address for user UID: ${currentUser?.uid}');
+  Future<void> _printUserEthereumAddress() async {
+    await getCurrentUser();
+    if (currentUser?.uid != null) {
+      String? ethAddress = await fetchUserEthereumAddress(currentUser!.uid);
+      if (ethAddress != null) {
+        setState(() {
+          currentUserUid = ethAddress;
+        });
+        _fetchUserEthereumBalance(); // เรียกใช้ฟังก์ชั่นเพื่ออัปเดตยอดเงิน Ethereum
+      }
     }
-  } else {
-    print('currentUserUid is null. Cannot fetch Ethereum Address.');
   }
-}
 
-
-
- Future<String?> fetchUserEthereumAddress(String uid) async {
+  Future<String?> fetchUserEthereumAddress(String uid) async {
     final userDocument = await _firestore.collection('users').doc(uid).get();
+    return userDocument.data()?['ethereumAddress'];
+  }
 
-    if (userDocument.exists) {
-      return userDocument.data()?['ethereumAddress'];
-    } else {
-      print('No user found for this UID: $uid');
-      return null;
+  Future<void> _fetchUserEthereumBalance() async {
+    if (currentUserUid != null) {
+      double? balance = await fetchUserEthereumBalance(currentUserUid);
+      if (balance != null) {
+        Provider.of<EthereumBalance>(context, listen: false).updateBalance(balance);
+      }
     }
   }
 
-
-
-
-
-Stream<double?> getBalanceStream() async* {
-  while (true) {
-    await Future.delayed(const Duration(seconds: 5)); 
-    print('Fetching balance for Ethereum address: $currentUserUid...');
-    final url = 'http://10.0.2.2:3000/getBalance/$currentUserUid';
-    final response = await http.get(Uri.parse(url));
-    print(response.body);
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = jsonDecode(response.body);
-      if (responseData.containsKey('balanceInEther')) {
-        try {
-          balanceInEther = double.parse(responseData['balanceInEther'].toString());
-yield balanceInEther;
-
-          print('Balance fetched successfully. Current Balance in Ether: $balanceInEther');
-        } catch (e) {
-          print('Error parsing balanceInEther: $e');
-          yield null;
-        }
-      } else {
-        yield null;
+  Future<double?> fetchUserEthereumBalance(String uid) async {
+  // ใช้ uid ตรงนี้แทน currentUserUid
+  final url = 'http://127.0.0.1:7545/getBalance/$uid';
+  final response = await http.get(Uri.parse(url));
+  if (response.statusCode == 200) {
+    final Map<String, dynamic> responseData = jsonDecode(response.body);
+    if (responseData.containsKey('balanceInEther')) {
+      try {
+        double? balanceInEther = double.parse(responseData['balanceInEther'].toString());
+        return balanceInEther;
+      } catch (e) {
+        return null;
       }
     } else {
-      yield null;
+      return null;
     }
+  } else {
+    return null;
   }
 }
-
-
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
+    final balanceFromProvider = Provider.of<EthereumBalance>(context).balance;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('รายการของรางวัล'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => UserNisit()));
+            Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => UserNisit()));
           },
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => RecordRedeemHistory()),
-              );
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecordRedeemHistory()));
             },
           ),
         ],
       ),
       body: Column(
         children: [
-         Padding(
-  padding: const EdgeInsets.all(16.0),
-  child: Container(
-    padding: const EdgeInsets.all(20.0),
-    decoration: BoxDecoration(
-      border: Border.all(color: Colors.blueAccent, width: 2.0),
-      borderRadius: BorderRadius.circular(15.0),
-      color: const Color.fromARGB(255, 29, 124, 37),
-    ),
-    child: StreamBuilder<double?>(
-      stream: getBalanceStream(),
-      builder: (BuildContext context, AsyncSnapshot<double?> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting || !snapshot.hasData) {
-          return const Text('กำลังโหลด...');
-        }
-        return Text(
-          'ยอดเหรียญของคุณ: ${snapshot.data?.toStringAsFixed(2) ?? '0'} เหรียญ',
-          style: const TextStyle(
-            fontSize: 24.0,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Container(
+              padding: const EdgeInsets.all(20.0),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.blueAccent, width: 2.0),
+                borderRadius: BorderRadius.circular(15.0),
+                color: const Color.fromARGB(255, 29, 124, 37),
+              ),
+              child: Text(
+                'ยอดเหรียญของคุณ: ${balanceFromProvider?.toStringAsFixed(2) ?? '0.00'} เหรียญ',
+                style: const TextStyle(
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
-        );
-      },
-    ),
-  ),
-),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestore.collection('rewards').snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('ไม่มีรางวัลที่สามารถแลกได้ในขณะนี้'));
                 }
@@ -178,7 +138,7 @@ yield balanceInEther;
                     final Map<String, dynamic> rewardData = reward.data() as Map<String, dynamic>;
                     final String imageUrl = rewardData['imageUrl'] as String? ?? '';
                     final String name = rewardData['name'] as String? ?? 'Unknown';
-                    final double coin = (rewardData['coin'] as num?)?.toDouble() ?? 0.0; // <-- Convert to double
+                    final double coin = (rewardData['coin'] as num?)?.toDouble() ?? 0.0;
                     final int quantity = rewardData['quantity'] as int? ?? 0;
 
                     return Card(
@@ -187,8 +147,10 @@ yield balanceInEther;
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => RewardDetailPage(reward: reward, userCoins: balanceInEther ?? 0.0, balanceInEther: balanceInEther ?? 0.0),
-
+                              builder: (context) => RewardDetailPage(
+                                reward: reward,
+                                balanceInEther: balanceFromProvider ?? 0.0, // ส่ง balanceInEther มาที่นี่
+                              ),
                             ),
                           );
                         },
@@ -218,4 +180,3 @@ yield balanceInEther;
     );
   }
 }
-

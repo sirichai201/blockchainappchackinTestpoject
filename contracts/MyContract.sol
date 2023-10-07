@@ -58,4 +58,26 @@ contract MyContract {
         // ส่งอีเวนท์แจ้งว่านักศึกษาได้รับควอยน์รางวัล
         emit Rewarded(student, rewardAmountEther);
     }
+
+    struct Reward {
+    string name;
+    string imageUrl;
+    uint256 coinCost;
+    uint256 quantity;
+    address rewardAddress; // เพิ่มฟิลด์นี้เพื่อเก็บ address ของรางวัล
+}
+    Reward[] public rewards;
+
+    function addReward(string memory _name, string memory _imageUrl, uint256 _coinCost, uint256 _quantity) public onlyOwner {
+    Reward memory newReward = Reward({
+        name: _name,
+        imageUrl: _imageUrl,
+        coinCost: _coinCost,
+        quantity: _quantity,
+        rewardAddress: owner // กำหนดให้ address ของรางวัลเป็นเดียวกันกับ owner ของ contract
+    });
+    rewards.push(newReward);
+}
+
+   
 }
