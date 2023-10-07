@@ -69,7 +69,7 @@ class _EditRewardPageState extends State<EditRewardPage> {
       Uri.parse("$apiUrl/updateReward"),
       headers: {"Content-Type": "application/json"},
       body: json.encode({
-        'rewardIndex': widget.reward['id'],
+        'rewardIndex': widget.reward['rewardIndex'],
         'newName': _nameController.text,
         'newCoinCost': toWei(double.parse(_coinController.text)).toString(),
         'newQuantity': int.parse(_quantityController.text),

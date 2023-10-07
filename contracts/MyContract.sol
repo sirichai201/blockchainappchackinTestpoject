@@ -70,9 +70,12 @@ contract MyContract {
     }
 
     // ดึงรายการรางวัล
-    function getRewards() public view returns (Reward[] memory) {
-        return rewards;
-    }
+   // ดึง index ของรายการรางวัลล่าสุด
+function getLastRewardIndex() public view returns (uint256) {
+    require(rewards.length > 0, "No rewards have been added yet.");
+    return rewards.length - 1;
+}
+
 
     // นิสิตแลกรางวัล
     function redeemReward(uint256 rewardIndex) public {

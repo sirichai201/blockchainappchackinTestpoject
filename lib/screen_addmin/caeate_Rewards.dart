@@ -37,7 +37,7 @@ class _CreateRewardsState extends State<CreateRewards> {
     }
   }
 
-  Future<void> addRewardToServer() async {
+  Future<int?> addRewardToServer() async {
     final url = 'http://10.0.2.2:3000/addReward';
     final response = await client.post(
       Uri.parse(url),
@@ -53,6 +53,7 @@ class _CreateRewardsState extends State<CreateRewards> {
 
     if (response.statusCode == 200) {
       final responseBody = json.decode(response.body);
+
       if (responseBody['status'] == 'success') {
         // แจ้งเตือนเมื่อสำเร็จ
         showDialog(
@@ -72,6 +73,9 @@ class _CreateRewardsState extends State<CreateRewards> {
             );
           },
         );
+
+        // คืนค่า rewardIndex ที่ได้รับจาก server กลับมา
+        return int.tryParse(responseBody['rewardIndex'].toString());
       } else {
         // แจ้งเตือนเมื่อเกิดปัญหา
         showDialog(
@@ -112,9 +116,12 @@ class _CreateRewardsState extends State<CreateRewards> {
         },
       );
     }
+
+    // ในกรณีที่มีข้อผิดพลาดหรือไม่ได้คืนค่า rewardIndex จาก server
+    return null;
   }
 
-  Future<void> addReward() async {
+  Future<void> addReward(int rewardIndex) async {
     if (_formKey.currentState?.validate() == true) {
       _formKey.currentState?.save();
 
@@ -126,6 +133,7 @@ class _CreateRewardsState extends State<CreateRewards> {
       }
 
       await _firestore.collection('rewards').add({
+        'rewardIndex': rewardIndex,
         'name': name,
         'imageUrl': imageUrl,
         'coin': balanceInEther,
@@ -138,8 +146,10 @@ class _CreateRewardsState extends State<CreateRewards> {
   }
 
   Future<void> addRewardAndSendToServer() async {
-    await addReward();
-    await addRewardToServer();
+    int? rewardIndex = await addRewardToServer();
+    if (rewardIndex != null) {
+      await addReward(rewardIndex);
+    }
   }
 
   @override

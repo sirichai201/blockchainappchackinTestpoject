@@ -139,11 +139,16 @@ app.post('/addReward', async (req, res) => {
     const tx = await contract.methods.addReward(name, coinCost, quantity).send({ from: senderAddress });
 
     if (tx.status === true) {
+        // เรียกข้อมูล rewardIndex จากสมาร์ตคอนแทร็กต์
+        const rewardIndex = await contract.methods.getLastRewardIndex().call();
+
+
         // ส่ง response กลับไปยัง Flutter ในรูปแบบ JSON
         res.json({
             status: 'success',
             message: 'Reward added successfully.',
             data: {
+                rewardIndex: rewardIndex,
                 name: name,
                 coinCost: coinCost,
                 quantity: quantity
@@ -157,6 +162,7 @@ app.post('/addReward', async (req, res) => {
     res.status(500).send('Internal Server Error.');
   }
 });
+
 
 
 
