@@ -51,9 +51,7 @@ class _CreateRewardsState extends State<CreateRewards> {
 
     if (response.statusCode == 200) {
       final responseBody = json.decode(response.body);
-      final rewardIndex = responseBody['data']['rewardIndex'];
-
-      print(rewardIndex);
+      print(responseBody);
       if (responseBody['status'] == 'success') {
         // แจ้งเตือนเมื่อสำเร็จ
         showDialog(

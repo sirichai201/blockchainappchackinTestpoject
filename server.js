@@ -1,9 +1,12 @@
 
 require('dotenv').config();
 
-const express = require('express');
+
 const admin = require('firebase-admin');
 const Web3 = require('web3');
+const express = require('express');
+const cors = require('cors');
+
 
 const app = express();
 const bodyParser = require('body-parser');
@@ -13,9 +16,7 @@ app.use(bodyParser.json());
 app.use(express.json());
 const web3 = new Web3('http://127.0.0.1:7545');
 
-const cors = require('cors');
-app.use(cors());
-
+app.use(cors()); 
 
 const path = require('path');
 const fs = require('fs');
@@ -135,40 +136,40 @@ app.get('/getBalance/:address', async (req, res) => {
 
 
 
-// สร้างของรางวัล
-app.post('/addReward', async (req, res) => {
-  
-  try {
-    // แสดงข้อมูลที่ส่งมาจาก Flutter
-    console.log('Received data from Flutter:', req.body);
+  // สร้างของรางวัล
+  app.post('/addReward', async (req, res) => {
+    
+    try {
+      // แสดงข้อมูลที่ส่งมาจาก Flutter
+      console.log('Received data from Flutter:', req.body);
 
-    const { name, coinCost, quantity } = req.body;
+      const { name, coinCost, quantity } = req.body;
 
-    const tx = await contract.methods.addReward(name, coinCost, quantity).send({ from: senderAddress });
+      const tx = await contract.methods.addReward(name, coinCost, quantity).send({ from: senderAddress });
 
-    if (tx.status === true) {
+      if (tx.status === true) {
 
-      const { rewards, lastRewardIndex } = await contract.methods.getCompleteRewardData().call();
-        // ส่ง response กลับไปยัง Flutter ในรูปแบบ JSON
-        res.json({
-            status: 'success',
-            message: 'Reward added successfully.',
-            data: {
-              rewardIndex: lastRewardIndex,
-                name: name,
-                coinCost: coinCost,
-                quantity: quantity
-            }
-        });
-        
-    } else {
-        throw new Error('Failed to add reward in smart contract.');
+      
+          // ส่ง response กลับไปยัง Flutter ในรูปแบบ JSON
+          res.json({
+              status: 'success',
+              message: 'Reward added successfully.',
+              data: {
+                
+                  name: name,
+                  coinCost: coinCost,
+                  quantity: quantity
+              }
+          });
+          
+      } else {
+          throw new Error('Failed to add reward in smart contract.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Internal Server Error.');
     }
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error.');
-  }
-});
+  });
 
 
 
