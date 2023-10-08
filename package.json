@@ -114,5 +114,6 @@
   "bugs": {
     "url": "https://github.com/sirichai201/blockchainappchackinTestpoject/issues"
   },
-  "homepage": "https://github.com/sirichai201/blockchainappchackinTestpoject#readme"
+  "homepage": "https://github.com/sirichai201/blockchainappchackinTestpoject#readme",
+  "devDependencies": {}
 }

@@ -17,12 +17,17 @@ const cors = require('cors');
 app.use(cors());
 
 
+const path = require('path');
+const fs = require('fs');
+
+const contractJSONPath = path.join(__dirname, 'build', 'contracts', 'MyContract.json');
+const contractJSON = JSON.parse(fs.readFileSync(contractJSONPath, 'utf8'));
+const abi = contractJSON.abi;
+
 
 const privateKey = process.env.PRIVATE_KEY;
-const { abi } = require('./build/contracts/MyContract.json');
-
 const senderAddress = process.env.SENDER_ADDRESS;
-const contractAddress = process.env.CONTRACT_ADDRESS;
+const contractAddress =  process.env.CONTRACT_ADDRESS;
 const contract = new web3.eth.Contract(abi, contractAddress);
 
 const serviceAccount = require('./projectblockchainapp-9defb-firebase-adminsdk-2doub-bab55a8ad3.json');
@@ -127,6 +132,9 @@ app.get('/getBalance/:address', async (req, res) => {
   }
 });
 
+
+
+
 // สร้างของรางวัล
 app.post('/addReward', async (req, res) => {
   
@@ -139,16 +147,13 @@ app.post('/addReward', async (req, res) => {
     const tx = await contract.methods.addReward(name, coinCost, quantity).send({ from: senderAddress });
 
     if (tx.status === true) {
-        // เรียกข้อมูล rewardIndex จากสมาร์ตคอนแทร็กต์
-        const rewardIndex = await contract.methods.getLastRewardIndex().call();
 
-
+      
         // ส่ง response กลับไปยัง Flutter ในรูปแบบ JSON
         res.json({
             status: 'success',
             message: 'Reward added successfully.',
             data: {
-                rewardIndex: rewardIndex,
                 name: name,
                 coinCost: coinCost,
                 quantity: quantity
@@ -166,25 +171,18 @@ app.post('/addReward', async (req, res) => {
 
 
 
-// ดูรายการของรางวัล
-app.get('/getRewards', async (_, res) => {
-  try {
-      const rewardsList = await contract.methods.getRewards().call();
-      res.json(rewardsList);
-  } catch (error) {
-      console.error('Error:', error);
-      res.status(500).send('Internal Server Error.');
-  }
-});
+
 
 //แก้ไข้ข้อมูลรายการของรางวัล
 app.post('/updateReward', async (req, res) => {
   try {
+    console.log('Coin cost received from Flutter:', coinCost);
       console.log('Received data for updating reward:', req.body);
       const { rewardIndex, newName, newCoinCost, newQuantity } = req.body;
 
       const tx = await contract.methods.updateReward(rewardIndex, newName, newCoinCost, newQuantity).send({ from: senderAddress });
-      
+      console.log('Coin cost received from Flutter:', coinCost);
+
       if (tx.status === true) {
           res.json({
               status: 'success',
