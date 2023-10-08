@@ -148,17 +148,19 @@ app.post('/addReward', async (req, res) => {
 
     if (tx.status === true) {
 
-      
+      const { rewards, lastRewardIndex } = await contract.methods.getCompleteRewardData().call();
         // ส่ง response กลับไปยัง Flutter ในรูปแบบ JSON
         res.json({
             status: 'success',
             message: 'Reward added successfully.',
             data: {
+              rewardIndex: lastRewardIndex,
                 name: name,
                 coinCost: coinCost,
                 quantity: quantity
             }
         });
+        
     } else {
         throw new Error('Failed to add reward in smart contract.');
     }
