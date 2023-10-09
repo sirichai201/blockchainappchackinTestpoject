@@ -15,7 +15,8 @@ contract MyContract {
     event SpentCoin(address indexed student, uint256 amount); // เหตุการณ์เมื่อนิสิตใช้เหรียญ
     event Rewarded(address indexed student, uint256 amount); // เหตุการณ์เมื่อนิสิตได้รับรางวัล
     event Redeemed(address indexed student, string rewardName, uint256 rewardCost, uint256 timestamp); // เหตุการณ์เมื่อนิสิตแลกรางวัล
-    
+    event LastRewardIndexChanged(uint256 newIndex);
+event RewardAdded(string name, uint256 coinCost, uint256 quantity, address rewardAddress);
 
     // ตัวคัดกรอง: ใช้เฉพาะเจ้าของสัญญา
     modifier onlyOwner() {
@@ -55,17 +56,18 @@ contract MyContract {
         emit Rewarded(student, rewardAmountEther); // ส่งเหตุการณ์ว่านิสิตได้รับรางวัล
     }
 
-    function addReward(string memory _name, uint256 _coinCost, uint256 _quantity) public onlyOwner { // เพิ่มรางวัล
-       
-     
-        Reward memory newReward = Reward({
-            name: _name,
-            coinCost: _coinCost,
-            quantity: _quantity,
-            rewardAddress: owner // ที่อยู่เจ้าของรางวัลเป็นเจ้าของสัญญา
-        });
-        rewards.push(newReward); // เพิ่มรางวัลในรายการ
-    }
+   function addReward(string memory _name, uint256 _coinCost, uint256 _quantity) public onlyOwner {
+    Reward memory newReward = Reward({
+        name: _name,
+        coinCost: _coinCost,
+        quantity: _quantity,
+        rewardAddress: owner
+    });
+    rewards.push(newReward); // เพิ่มรางวัลในรายการ
+
+    // Emit the event
+    emit RewardAdded(_name, _coinCost, _quantity, owner);
+}
 
     function updateReward(uint256 rewardIndex, string memory newName, uint256 newCoinCost, uint256 newQuantity) public onlyOwner { // อัพเดทรางวัล
         require(rewardIndex < rewards.length, "Invalid reward index"); // ตรวจสอบ index ของรางวัล
@@ -96,6 +98,14 @@ contract MyContract {
     return (rewards, lastRewardIndex, rewardIndices);
 }
 
+function getLastRewardIndex() public view returns (uint256) {
+    return rewards.length > 0 ? rewards.length - 1 : 0;
+}
+
+function emitLastRewardIndex() public {
+    uint256 index = rewards.length > 0 ? rewards.length - 1 : 0;
+    emit LastRewardIndexChanged(index);
+}
 
 
 

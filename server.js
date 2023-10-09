@@ -26,7 +26,7 @@ const contractJSON = JSON.parse(fs.readFileSync(contractJSONPath, 'utf8'));
 const abi = contractJSON.abi;
 
 
-const privateKey = process.env.PRIVATE_KEY;
+const privateKey = process.env.PRIVATE_KEY; 
 const senderAddress = process.env.SENDER_ADDRESS;
 const contractAddress =  process.env.CONTRACT_ADDRESS;
 const contract = new web3.eth.Contract(abi, contractAddress);
@@ -139,37 +139,54 @@ app.get('/getBalance/:address', async (req, res) => {
   // สร้างของรางวัล
   app.post('/addReward', async (req, res) => {
     
-    try {
-      // แสดงข้อมูลที่ส่งมาจาก Flutter
-      console.log('Received data from Flutter:', req.body);
+    console.log('Received data from Flutter:', req.body);
 
-      const { name, coinCost, quantity } = req.body;
+    const { name, coinCost, quantity } = req.body;
 
-      const tx = await contract.methods.addReward(name, coinCost, quantity).send({ from: senderAddress });
+    const tx = await contract.methods.addReward(name, coinCost, quantity).send({ from: senderAddress });
+    console.log("Transaction status:", tx.status); // แสดงสถานะของ transaction
 
-      if (tx.status === true) {
+    if (tx.status === true) {
+  
+        res.json({
+            status: 'success',
+            message: 'Reward added successfully.',
+            data: {
+               
+                name: name,
+                coinCost: coinCost,
+                quantity: quantity
+            }
+        });
+    } else {
+        console.error('Failed to add reward in smart contract.'); // แก้ไขบรรทัดนี้
+        res.status(500).send('Internal Server Error.');
+    }
+});
 
-      
-          // ส่ง response กลับไปยัง Flutter ในรูปแบบ JSON
+
+//ดึงเอาlastRewardIndex ที่สร้างล่าสุด
+app.get('/getLastRewardIndex', async (req, res) => {
+  try {
+      const contractInstance = new web3.eth.Contract(abi, contractAddress);
+      const lastRewardIndex = await contractInstance.methods.getLastRewardIndex().call();
+      if (typeof lastRewardIndex !== 'undefined' && lastRewardIndex !== null) {
           res.json({
               status: 'success',
-              message: 'Reward added successfully.',
-              data: {
-                
-                  name: name,
-                  coinCost: coinCost,
-                  quantity: quantity
-              }
+              lastRewardIndex: lastRewardIndex
           });
-          
       } else {
-          throw new Error('Failed to add reward in smart contract.');
+          res.json({
+              status: 'error',
+              message: 'Failed to retrieve the last reward index.'
+          });
       }
-    } catch (error) {
-      console.error('Error:', error);
+  } catch (error) {
+      console.error('Error getting lastRewardIndex:', error);
       res.status(500).send('Internal Server Error.');
-    }
-  });
+  }
+});
+
 
 
 

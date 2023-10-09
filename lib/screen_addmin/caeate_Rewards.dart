@@ -113,6 +113,27 @@ class _CreateRewardsState extends State<CreateRewards> {
     }
   }
 
+  Future<int?> getLastRewardIndexFromServer() async {
+    try {
+      final url = 'http://10.0.2.2:3000/getLastRewardIndex';
+      final response = await client.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        if (responseBody['status'] == 'success') {
+          return int.parse(responseBody['lastRewardIndex']);
+        }
+      }
+      // ในกรณีที่ API ส่ง status กลับมาเป็น error
+      print("Error from API: ${response.body}");
+      return null;
+    } catch (error) {
+      print('Error getting lastRewardIndex: $error');
+      // คุณสามารถแสดงข้อความผิดพลาดที่เกิดขึ้นหรือจัดการกับมันได้ที่นี่
+      return null;
+    }
+  }
+
   Future<void> addReward() async {
     if (_formKey.currentState?.validate() == true) {
       _formKey.currentState?.save();
@@ -137,8 +158,13 @@ class _CreateRewardsState extends State<CreateRewards> {
   }
 
   Future<void> addRewardAndSendToServer() async {
+    if (_formKey.currentState?.validate() == true) {
+      _formKey.currentState?.save();
+
+      await addRewardToServer();
+    }
+    await getLastRewardIndexFromServer();
     await addReward();
-    await addRewardToServer();
   }
 
   @override
