@@ -36,7 +36,8 @@ class _CreateRewardsState extends State<CreateRewards> {
   }
 
   Future<void> addRewardToServer() async {
-    final url = 'http://10.0.2.2:3000/addReward';
+    final url = 'http:localhost:3000/addReward';
+
     final response = await client.post(
       Uri.parse(url),
       headers: {

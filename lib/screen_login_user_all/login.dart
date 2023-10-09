@@ -18,7 +18,17 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  bool isValidEmail(String email) {
+    final RegExp regex = RegExp(r"^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+    return regex.hasMatch(email);
+  }
+
   Future<void> _login() async {
+    if (!isValidEmail(_usernameController.text.trim())) {
+      _showErrorSnackBar(context, 'รูปแบบอีเมลไม่ถูกต้อง');
+      return;
+    }
     try {
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
@@ -53,10 +63,7 @@ class _LoginState extends State<Login> {
       }
     } on FirebaseAuthException catch (e) {
       print("Error code: ${e.code}");
-
-      // เพิ่ม print statement นี้เพื่อดู error ที่ถูก throw
       print("FirebaseAuthException Caught: $e");
-      // จัดการกับข้อผิดพลาดที่เกี่ยวข้องกับ FirebaseAuth
       if (e.code == 'user-not-found') {
         _showErrorSnackBar(context, 'ไม่มีผู้ใช้งานที่มีอีเมลนี้');
       } else if (e.code == 'wrong-password') {
@@ -66,11 +73,15 @@ class _LoginState extends State<Login> {
       }
     } on PlatformException catch (e) {
       print("PlatformException: $e");
-      _showErrorSnackBar(context, 'มีข้อผิดพลาดเกิดขึ้นในระบบ: $e');
+      if (e.code == 'ERROR_INVALID_EMAIL') {
+        _showErrorSnackBar(context, 'รูปแบบอีเมลไม่ถูกต้อง');
+      } else {
+        _showErrorSnackBar(context, 'มีข้อผิดพลาดเกิดขึ้นในระบบ: $e');
+      }
     } catch (e) {
       print("General Exception: $e");
       _showErrorSnackBar(context, 'มีข้อผิดพลาดเกิดขึ้น: $e');
-    } // ต้องใส่ } ตรงนี้เพื่อปิด block ของ try-catch  32616151151
+    }
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {
