@@ -21,7 +21,7 @@ class _EditRewardPageState extends State<EditRewardPage> {
   final _formKey = GlobalKey<FormState>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String apiUrl =
-      "http://10.0.2.2:3000"; // เปลี่ยนเป็น IP และพอร์ตของเซิร์ฟเวอร์ของท่าน
+      "http://192.168.1.2:3000"; // เปลี่ยนเป็น IP และพอร์ตของเซิร์ฟเวอร์ของท่าน
   late TextEditingController _nameController;
   late TextEditingController _coinController;
   late TextEditingController _imageUrlController;

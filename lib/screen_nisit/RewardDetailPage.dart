@@ -9,7 +9,9 @@ class RewardDetailPage extends StatefulWidget {
   final DocumentSnapshot reward;
   final double balanceInEther; // เพิ่ม balanceInEther เพื่อใช้ในการคำนวณ
 
-  RewardDetailPage({required this.reward, required this.balanceInEther}); // รับพารามิเตอร์ balanceInEther
+  RewardDetailPage(
+      {required this.reward,
+      required this.balanceInEther}); // รับพารามิเตอร์ balanceInEther
 
   @override
   _RewardDetailPageState createState() => _RewardDetailPageState();
@@ -33,7 +35,7 @@ class EthereumBalance with ChangeNotifier {
 
 class _RewardDetailPageState extends State<RewardDetailPage> {
   Future<bool> redeemRewardFromServer(String userAddress, double cost) async {
-    final url = 'http://127.0.0.1:7545/redeemReward';
+    final url = 'http://192.168.1.2:3000/redeemReward';
     final response = await http.post(
       Uri.parse(url),
       body: jsonEncode({
@@ -49,26 +51,27 @@ class _RewardDetailPageState extends State<RewardDetailPage> {
   }
 
   void _redeemReward(double balance) async {
-  final user = FirebaseAuth.instance.currentUser;
-  final data = widget.reward.data() as Map<String, dynamic>;
-  final coin = (data['coin'] as num?)?.toDouble() ?? 0.0;
+    final user = FirebaseAuth.instance.currentUser;
+    final data = widget.reward.data() as Map<String, dynamic>;
+    final coin = (data['coin'] as num?)?.toDouble() ?? 0.0;
 
-  if (balance < coin) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('เหรียญ Ethereum ไม่เพียงพอสำหรับการแลก')));
-    return;
+    if (balance < coin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เหรียญ Ethereum ไม่เพียงพอสำหรับการแลก')));
+      return;
+    }
+
+    final success = await redeemRewardFromServer(user!.uid, coin);
+    if (success) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('แลกของรางวัลสำเร็จ')));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('แลกของรางวัลล้มเหลว')));
+    }
   }
 
-  final success = await redeemRewardFromServer(user!.uid, coin);
-  if (success) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('แลกของรางวัลสำเร็จ')));
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('แลกของรางวัลล้มเหลว')));
-  }
-}
-
-
-    @override
+  @override
   Widget build(BuildContext context) {
     final data = widget.reward.data() as Map<String, dynamic>;
     final name = data['name'] as String? ?? 'Unknown';
@@ -77,35 +80,37 @@ class _RewardDetailPageState extends State<RewardDetailPage> {
     final remainingQuantity = data['quantity'] as int? ?? 0;
     final currentBalance = widget.balanceInEther;
 
-   return Scaffold(
-    appBar: AppBar(
-      title: Text('รายละเอียดของรางวัล'),
-    ),
-    body: Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('ยอดเหรียญ Ethereum ของคุณ: ${currentBalance?.toStringAsFixed(2) ?? '0.00'} ETH'),
-          SizedBox(height: 10.0),
-          if (imageUrl.isNotEmpty) Image.network(imageUrl),
-          Text('Name: $name'),
-          Text('Cost: ${coin.toStringAsFixed(2)} coins'),
-          Text('Remaining Quantity: $remainingQuantity'),
-          ElevatedButton(
-            onPressed: () {
-              if (currentBalance >= coin) {
-                _redeemReward(currentBalance); // ส่งค่า currentBalance เข้าไปใน _redeemReward
-              } else {
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text('เหรียญ Ethereum ไม่เพียงพอสำหรับการแลก')));
-              }
-            },
-            child: Text('ยืนยันการแลกของรางวัล'),
-          ),
-        ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('รายละเอียดของรางวัล'),
       ),
-    ),
-  );
-}
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                'ยอดเหรียญ Ethereum ของคุณ: ${currentBalance?.toStringAsFixed(2) ?? '0.00'} ETH'),
+            SizedBox(height: 10.0),
+            if (imageUrl.isNotEmpty) Image.network(imageUrl),
+            Text('Name: $name'),
+            Text('Cost: ${coin.toStringAsFixed(2)} coins'),
+            Text('Remaining Quantity: $remainingQuantity'),
+            ElevatedButton(
+              onPressed: () {
+                if (currentBalance >= coin) {
+                  _redeemReward(
+                      currentBalance); // ส่งค่า currentBalance เข้าไปใน _redeemReward
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('เหรียญ Ethereum ไม่เพียงพอสำหรับการแลก')));
+                }
+              },
+              child: Text('ยืนยันการแลกของรางวัล'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

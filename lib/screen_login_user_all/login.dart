@@ -63,13 +63,16 @@ class _LoginState extends State<Login> {
       }
     } on FirebaseAuthException catch (e) {
       print("Error code: ${e.code}");
-      print("FirebaseAuthException Caught: $e");
-      if (e.code == 'user-not-found') {
-        _showErrorSnackBar(context, 'ไม่มีผู้ใช้งานที่มีอีเมลนี้');
-      } else if (e.code == 'wrong-password') {
-        _showErrorSnackBar(context, 'รหัสผ่านไม่ถูกต้อง');
-      } else {
-        _showErrorSnackBar(context, 'มีข้อผิดพลาด: $e');
+      switch (e.code) {
+        case 'user-not-found':
+          _showErrorSnackBar(context, 'ไม่มีผู้ใช้งานที่มีอีเมลนี้');
+          break;
+        case 'wrong-password':
+          _showErrorSnackBar(context, 'รหัสผ่านไม่ถูกต้อง');
+          break;
+        default:
+          _showErrorSnackBar(context, 'มีข้อผิดพลาด: $e');
+          break;
       }
     } on PlatformException catch (e) {
       print("PlatformException: $e");
